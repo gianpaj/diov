@@ -34,8 +34,8 @@ A multiplayer 2D webapp game where players compete to eat each other and become 
 
 ### Prerequisites
 
-- Node.js (18.0.0 or higher)
-- npm (9.0.0 or higher)
+- Node.js (20.0.0 or higher)
+- pnpm (9.0.0 or higher)
 
 ### Installation
 
@@ -47,12 +47,12 @@ A multiplayer 2D webapp game where players compete to eat each other and become 
 
 2. **Install dependencies**
    ```bash
-   npm install
+   pnpm install
    ```
 
 3. **Start the development server**
    ```bash
-   npm run dev
+   pnpm run dev
    ```
 
 4. **Open your browser**
@@ -62,14 +62,14 @@ A multiplayer 2D webapp game where players compete to eat each other and become 
 
 ### Available Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run lint:fix` - Fix ESLint issues
-- `npm run format` - Format code with Prettier
-- `npm run type-check` - Run TypeScript type checking
-- `npm test` - Run tests
+- `pnpm run dev` - Start development server
+- `pnpm run build` - Build for production
+- `pnpm run preview` - Preview production build
+- `pnpm run lint` - Run ESLint
+- `pnpm run lint:fix` - Fix ESLint issues
+- `pnpm run format` - Format code with Prettier
+- `pnpm run type-check` - Run TypeScript type checking
+- `pnpm test` - Run tests
 
 ### Project Structure
 
@@ -271,3 +271,43 @@ See [ROADMAP.md](ROADMAP.md) for detailed development phases and upcoming featur
 ---
 
 **Ready to battle?** Start the game and become the ultimate circle champion! 🏆
+
+
+## other Concept Ideas
+
+
+1. Blob Royale
+
+Theme: Colorful goo creatures in a fast-paced shrinking arena
+Key Mechanics Differences:
+-	Sticky Trails: As players move, they leave behind a sticky trail for 3 seconds. Others slow down if they cross it, allowing ambushes.
+-	Combo Bites: Eating two players within 10 seconds triggers a “combo” that gives a short speed boost.
+-	Power Blob Events: Every 30 seconds, a super-knibble spawns and grants temporary invincibility (can’t be eaten but can eat anyone smaller).
+
+Casual Appeal: Chaotic fun with visual feedback and low skill floor; more forgiving and flashy.
+
+2. Nibble Rush
+
+Theme: Candy-like world where you munch to grow
+Key Mechanics Differences:
+- Boost Zones: Certain areas on the map give players a temporary speed boost if passed over.
+- Shrink Bombs: A third button lets you drop a “shrink bomb” that slightly shrinks everyone in range, including you (use strategically).
+- Knibble Types: Some knibbles explode, some shrink you slightly, some give double size. Adds casual risk-reward decision making.
+
+Casual Appeal: Whimsical, unpredictable, quick rounds with low punishment.
+
+3. Circle Splitz
+
+Theme: Geometric minimalism with arcade flair
+Key Mechanics Differences:
+- Chain Split Mechanic: You can split more than once in succession, creating up to 20 micro-circles. Perfect control = big reward, bad control = chaos.
+- Merge Timer: After splitting, players can only merge again after 10 seconds (forces strategy).
+- Mirror Clone Power-Up: Occasionally clones your circle for 10 seconds—confuses opponents as both can eat but only one is real.
+
+Casual Appeal: Tactile, strategic, but visually minimal for players who enjoy clever plays and deception.
+
+## Research TODO
+
+- [Colyseus](https://github.com/colyseus/colyseus) - Typescript
+- nengi.js
+- Nodecraft or Heroic Cloud

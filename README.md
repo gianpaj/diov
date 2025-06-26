@@ -273,36 +273,36 @@ See [ROADMAP.md](ROADMAP.md) for detailed development phases and upcoming featur
 **Ready to battle?** Start the game and become the ultimate circle champion! 🏆
 
 
-## other Concept Ideas
+## Other Concept Ideas
 
 
-1. Blob Royale
+1. **Blob Royale**
 
 Theme: Colorful goo creatures in a fast-paced shrinking arena
 Key Mechanics Differences:
 -	Sticky Trails: As players move, they leave behind a sticky trail for 3 seconds. Others slow down if they cross it, allowing ambushes.
--	Combo Bites: Eating two players within 10 seconds triggers a “combo” that gives a short speed boost.
--	Power Blob Events: Every 30 seconds, a super-knibble spawns and grants temporary invincibility (can’t be eaten but can eat anyone smaller).
+-	Combo Bites: Eating two players within 10 seconds triggers a "combo" that gives a short speed boost.
+-	Power Blob Events: Every 30 seconds, a super-knibble spawns and grants temporary invincibility (can't be eaten but can eat anyone smaller).
 
 Casual Appeal: Chaotic fun with visual feedback and low skill floor; more forgiving and flashy.
 
-2. Nibble Rush
+2. **Nibble Rush**
 
 Theme: Candy-like world where you munch to grow
 Key Mechanics Differences:
 - Boost Zones: Certain areas on the map give players a temporary speed boost if passed over.
-- Shrink Bombs: A third button lets you drop a “shrink bomb” that slightly shrinks everyone in range, including you (use strategically).
+- Shrink Bombs: A third button allows you to drop a "shrink bomb" that slightly shrinks everyone in range, including yourself (use strategically).
 - Knibble Types: Some knibbles explode, some shrink you slightly, some give double size. Adds casual risk-reward decision making.
 
 Casual Appeal: Whimsical, unpredictable, quick rounds with low punishment.
 
-3. Circle Splitz
+3. **Circle Splitz**
 
 Theme: Geometric minimalism with arcade flair
 Key Mechanics Differences:
-- Chain Split Mechanic: You can split more than once in succession, creating up to 20 micro-circles. Perfect control = big reward, bad control = chaos.
+- Chain Split Mechanic: You can split more than once in succession, creating up to 20 micro-circles. Perfect control yields big rewards, while poor control leads to chaos.
 - Merge Timer: After splitting, players can only merge again after 10 seconds (forces strategy).
-- Mirror Clone Power-Up: Occasionally clones your circle for 10 seconds—confuses opponents as both can eat but only one is real.
+- Mirror Clone Power-Up: Occasionally clones your circle for 10 seconds—confuses opponents as both can eat, but only one is real.
 
 Casual Appeal: Tactile, strategic, but visually minimal for players who enjoy clever plays and deception.
 

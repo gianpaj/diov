@@ -19,13 +19,7 @@ const WaitingRoom: React.FC = () => {
     leaveGame,
   } = useSocketStore()
 
-  const {
-    gameState,
-    uiState,
-    updateUIState,
-    gameConfig,
-    setGameState,
-  } = useGameStore()
+  const { gameState, uiState, updateUIState, gameConfig, setGameState } = useGameStore()
 
   // Get player list from game state
   const players = gameState ? Object.values(gameState.players) : []
@@ -36,7 +30,7 @@ const WaitingRoom: React.FC = () => {
 
   useEffect(() => {
     // Set up socket event listeners
-    const unsubscribeGameState = onGameStateUpdate((state) => {
+    const unsubscribeGameState = onGameStateUpdate(state => {
       setGameState(state)
 
       // If game is starting, show countdown and navigate
@@ -53,15 +47,15 @@ const WaitingRoom: React.FC = () => {
       }
     })
 
-    const unsubscribePlayerJoined = onPlayerJoined((data) => {
+    const unsubscribePlayerJoined = onPlayerJoined(data => {
       console.log('Player joined:', data.player.name)
     })
 
-    const unsubscribePlayerLeft = onPlayerLeft((data) => {
+    const unsubscribePlayerLeft = onPlayerLeft(data => {
       console.log('Player left:', data.playerId)
     })
 
-    const unsubscribeGameStarted = onGameStarted((data) => {
+    const unsubscribeGameStarted = onGameStarted(data => {
       console.log('Game started!')
       setCountdown(data.countdown)
 
@@ -134,12 +128,10 @@ const WaitingRoom: React.FC = () => {
 
   if (countdown !== null) {
     return (
-      <div className="waiting-room countdown-screen">
-        <div className="countdown-container">
+      <div className='waiting-room countdown-screen'>
+        <div className='countdown-container'>
           <h1>Game Starting!</h1>
-          <div className="countdown-number pulse">
-            {countdown}
-          </div>
+          <div className='countdown-number pulse'>{countdown}</div>
           <p>Get ready to battle!</p>
         </div>
       </div>
@@ -147,12 +139,13 @@ const WaitingRoom: React.FC = () => {
   }
 
   return (
-    <div className="waiting-room">
-      <div className="waiting-room-container fade-in">
-        <div className="room-header">
-          <div className="header-left">
+    <div className='waiting-room'>
+      <div className='waiting-room-container fade-in'>
+        <div className='room-header'>
+          <div className='header-left'>
             <button
-              className="btn btn-secondary"
+              className='btn btn-secondary'
+              type='button'
               onClick={handleLeaveGame}
               style={{ padding: '10px 15px', fontSize: '14px' }}
             >
@@ -161,13 +154,13 @@ const WaitingRoom: React.FC = () => {
             </button>
           </div>
 
-          <div className="header-center">
+          <div className='header-center'>
             <h2>Waiting Room</h2>
           </div>
 
-          <div className="header-right">
+          <div className='header-right'>
             <div
-              className="connection-indicator"
+              className='connection-indicator'
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -182,92 +175,89 @@ const WaitingRoom: React.FC = () => {
           </div>
         </div>
 
-        <div className="room-content">
-          <div className="game-status">
-            <div className="status-card">
-              <div className="status-icon">
+        <div className='room-content'>
+          <div className='game-status'>
+            <div className='status-card'>
+              <div className='status-icon'>
                 <Users size={32} />
               </div>
-              <div className="status-info">
-                <h3>{playerCount} / {maxPlayers} Players</h3>
+              <div className='status-info'>
+                <h3>
+                  {playerCount} / {maxPlayers} Players
+                </h3>
                 <p>{getPlayerStatusText()}</p>
               </div>
             </div>
 
-            <div className="progress-container">
-              <div className="progress-bar">
+            <div className='progress-container'>
+              <div className='progress-bar'>
                 <div
-                  className="progress-fill"
+                  className='progress-fill'
                   style={{
                     width: `${Math.max((playerCount / minPlayers) * 100, 0)}%`,
                   }}
                 />
               </div>
-              <div className="progress-text">
+              <div className='progress-text'>
                 {canStartGame ? 'Ready!' : `${minPlayers - playerCount} more needed`}
               </div>
             </div>
           </div>
 
-          <div className="players-section">
+          <div className='players-section'>
             <h3>
               <Users size={20} />
               Players ({playerCount})
             </h3>
 
-            <div className="player-list">
+            <div className='player-list'>
               {players.map((player, index) => (
-                <div key={player.id} className="player-item">
-                  <div className="player-avatar">
-                    <div
-                      className="avatar-circle"
-                      style={{ backgroundColor: player.color }}
-                    >
-                      {player.name.charAt(0).toUpperCase()}
+                <div key={player.id} className='player-item'>
+                  <div className='player-avatar'>
+                    <div className='avatar-circle' style={{ backgroundColor: player.color }}>
+                      {player.name?.charAt(0).toUpperCase()}
                     </div>
                   </div>
-                  <div className="player-info">
-                    <div className="player-name">
+                  <div className='player-info'>
+                    <div className='player-name'>
                       {player.name}
                       {player.name === uiState.playerName && (
-                        <span className="you-indicator">(You)</span>
+                        <span className='you-indicator'>(You)</span>
                       )}
                     </div>
-                    <div className="player-status">Ready</div>
+                    <div className='player-status'>Ready</div>
                   </div>
-                  <div className="player-rank">
-                    #{index + 1}
-                  </div>
+                  <div className='player-rank'>#{index + 1}</div>
                 </div>
               ))}
 
               {/* Empty slots */}
               {Array.from({ length: maxPlayers - playerCount }).map((_, index) => (
-                <div key={`empty-${index}`} className="player-item empty-slot">
-                  <div className="player-avatar">
-                    <div className="avatar-circle empty">
+                <div key={`empty-${index}`} className='player-item empty-slot'>
+                  <div className='player-avatar'>
+                    <div className='avatar-circle empty'>
                       <Users size={16} />
                     </div>
                   </div>
-                  <div className="player-info">
-                    <div className="player-name">Waiting for player...</div>
-                    <div className="player-status">Empty</div>
+                  <div className='player-info'>
+                    <div className='player-name'>Waiting for player...</div>
+                    <div className='player-status'>Empty</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="room-info">
-            <div className="info-cards">
-              <div className="info-card">
+          <div className='room-info'>
+            <div className='info-cards'>
+              <div className='info-card'>
                 <Clock size={20} />
                 <div>
                   <h4>Game Duration</h4>
                   <p>5 minutes</p>
                 </div>
               </div>
-              <div className="info-card">
+              <div className='info-card'>
                 <Play size={20} />
                 <div>
                   <h4>Auto Start</h4>
@@ -279,7 +269,7 @@ const WaitingRoom: React.FC = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .waiting-room {
           width: 100vw;
           height: 100vh;

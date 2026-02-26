@@ -333,6 +333,7 @@ A multiplayer 2D webapp game where players compete to eat each other and become 
   - Touch state management and cooldowns
 
 #### Game UI
+
 - [ ] **HUD Elements**
   - Player size indicator
   - Remaining time counter

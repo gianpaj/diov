@@ -2,23 +2,21 @@
 export * from './game'
 
 // Re-export commonly used types for convenience
+export { GameStatus, ConnectionStatus, EffectType } from './game'
 export type {
   Vector2D,
   Player,
   GameState,
-  GameStatus,
   PlayerInput,
   Knibble,
   SpitBlob,
   GameBounds,
   UIState,
-  ConnectionStatus,
   Camera,
   Viewport,
   JoystickState,
   TouchData,
   ParticleEffect,
-  EffectType,
   AudioState,
   SoundEffect,
   GameConfig,
@@ -30,7 +28,7 @@ export type {
   GameEndedMessage,
   PlayerEatenMessage,
   KnibbleSpawnedMessage,
-  ErrorMessage
+  ErrorMessage,
 } from './game'
 
 // Export constants

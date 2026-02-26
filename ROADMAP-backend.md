@@ -24,6 +24,7 @@ backend/
 ```
 
 **Pros:**
+
 - ✅ Perfect match with your existing Socket.io client
 - ✅ JavaScript ecosystem consistency
 - ✅ Excellent real-time performance
@@ -31,11 +32,13 @@ backend/
 - ✅ Easy to prototype and iterate
 
 **Cons:**
+
 - ❌ Single-threaded (can be mitigated with clustering)
 - ❌ Memory usage for large player counts
 
 **Sample Implementation:**
-```javascript
+
+```js
 // GameEngine.js
 class GameEngine {
   constructor() {
@@ -131,12 +134,14 @@ func (r *GameRoom) gameLoop() {
 ```
 
 **Pros:**
+
 - ✅ Exceptional performance and concurrency
 - ✅ Low latency, perfect for real-time games
 - ✅ Excellent memory management
 - ✅ Built-in goroutines for concurrent game rooms
 
 **Cons:**
+
 - ❌ Different language from frontend
 - ❌ Steeper learning curve
 - ❌ Less game development ecosystem
@@ -199,12 +204,14 @@ const gameStateUpdate = {
 ```
 
 **Why perfect for PIXI.js:**
+
 - Low latency for smooth animations
 - Bidirectional communication
 - JSON support for complex game states
 - Works well with mobile networks
 
 ### **WebRTC Data Channels**
+
 ```javascript
 // P2P option for reduced server load
 const dataChannel = peerConnection.createDataChannel('gameData', {
@@ -214,11 +221,13 @@ const dataChannel = peerConnection.createDataChannel('gameData', {
 ```
 
 **Pros:**
+
 - ✅ Ultra-low latency
 - ✅ Reduced server costs
 - ✅ Direct peer communication
 
 **Cons:**
+
 - ❌ Complex NAT traversal
 - ❌ Harder to implement anti-cheat
 - ❌ Not suitable for 12-player games
@@ -400,14 +409,15 @@ exports.handler = async (event) => {
 - **CDN**: CloudFlare for global latency
 
 ### **Sample Backend Setup Script**
+
 ```bash
 # Quick start backend setup
-mkdir battle-circles-backend
-cd battle-circles-backend
+mkdir backend
+cd backend
 
-npm init -y
-npm install socket.io express redis cors helmet
-npm install -D nodemon typescript @types/node
+pnpm init -y
+pnpm install socket.io express redis cors helmet
+pnpm install -D nodemon typescript @types/node
 
 # Create basic structure
 mkdir -p src/{game,networking,database}
@@ -415,4 +425,3 @@ touch src/server.ts src/game/GameEngine.ts src/game/GameRoom.ts
 ```
 
 This architecture will provide excellent performance with your PIXI.js frontend, smooth real-time updates, and room for scaling as your player base grows!
-

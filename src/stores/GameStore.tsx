@@ -1,17 +1,18 @@
-import React, { createContext, useContext, ReactNode } from 'react'
+import type React from 'react'
+import { createContext, type ReactNode, useContext } from 'react'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import {
-  GameState,
-  Player,
-  GameStatus,
-  PlayerInput,
-  Vector2D,
-  Camera,
-  UIState,
+  type Camera,
   ConnectionStatus,
-  GameConfig,
-  GAME_CONSTANTS
+  GAME_CONSTANTS,
+  type GameConfig,
+  type GameState,
+  GameStatus,
+  type Player,
+  type PlayerInput,
+  type UIState,
+  type Vector2D,
 } from '@/types'
 
 interface GameStore {
@@ -47,7 +48,7 @@ interface GameStore {
 
 const defaultGameConfig: GameConfig = {
   maxPlayers: 12,
-  minPlayers: 5,
+  minPlayers: 2, // MIN_PLAYERS_PER_ROOM
   gameDuration: 5 * 60 * 1000, // 5 minutes
   mapShrinkRate: 0.1,
   knibbleSpawnInterval: { min: 5000, max: 10000 },
@@ -126,19 +127,19 @@ export const useGameStore = create<GameStore>()(
 
     updatePlayerInput: (input: Partial<PlayerInput>) => {
       set(state => ({
-        playerInput: { ...state.playerInput, ...input }
+        playerInput: { ...state.playerInput, ...input },
       }))
     },
 
     updateCamera: (cameraUpdate: Partial<Camera>) => {
       set(state => ({
-        camera: { ...state.camera, ...cameraUpdate }
+        camera: { ...state.camera, ...cameraUpdate },
       }))
     },
 
     updateUIState: (uiUpdate: Partial<UIState>) => {
       set(state => ({
-        uiState: { ...state.uiState, ...uiUpdate }
+        uiState: { ...state.uiState, ...uiUpdate },
       }))
     },
 
@@ -192,8 +193,8 @@ export const useGameStore = create<GameStore>()(
       set(state => ({
         playerInput: {
           ...state.playerInput,
-          movement: direction
-        }
+          movement: direction,
+        },
       }))
     },
 
@@ -201,8 +202,8 @@ export const useGameStore = create<GameStore>()(
       set(state => ({
         playerInput: {
           ...state.playerInput,
-          splitPressed: pressed
-        }
+          splitPressed: pressed,
+        },
       }))
     },
 
@@ -210,8 +211,8 @@ export const useGameStore = create<GameStore>()(
       set(state => ({
         playerInput: {
           ...state.playerInput,
-          spitPressed: pressed
-        }
+          spitPressed: pressed,
+        },
       }))
     },
   }))
@@ -221,11 +222,7 @@ export const useGameStore = create<GameStore>()(
 const GameStoreContext = createContext<typeof useGameStore | null>(null)
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  return (
-    <GameStoreContext.Provider value={useGameStore}>
-      {children}
-    </GameStoreContext.Provider>
-  )
+  return <GameStoreContext.Provider value={useGameStore}>{children}</GameStoreContext.Provider>
 }
 
 export const useGameContext = () => {

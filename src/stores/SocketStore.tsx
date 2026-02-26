@@ -17,7 +17,7 @@ import {
   PlayerEatenMessage,
   KnibbleSpawnedMessage,
   ErrorMessage,
-  PlayerInput
+  PlayerInput,
 } from '@/types'
 
 interface SocketStore {
@@ -57,6 +57,7 @@ interface SocketStore {
   updateLatency: (latency: number) => void
   incrementReconnectAttempts: () => void
   resetReconnectAttempts: () => void
+  startPingMonitoring: () => void
 }
 
 const DEFAULT_SERVER_URL = import.meta.env.VITE_SERVER_URL || 'ws://localhost:3001'
@@ -109,7 +110,7 @@ export const useSocketStore = create<SocketStore>()(
         get().startPingMonitoring()
       })
 
-      newSocket.on('disconnect', (reason) => {
+      newSocket.on('disconnect', reason => {
         console.log('Socket disconnected:', reason)
         set({
           isConnected: false,
@@ -122,7 +123,7 @@ export const useSocketStore = create<SocketStore>()(
         }
       })
 
-      newSocket.on('connect_error', (error) => {
+      newSocket.on('connect_error', error => {
         console.error('Socket connection error:', error)
         set({ connectionStatus: ConnectionStatus.ERROR })
 
@@ -175,9 +176,12 @@ export const useSocketStore = create<SocketStore>()(
 
       // Exponential backoff
       const delay = get().reconnectDelay * Math.pow(2, reconnectAttempts)
-      setTimeout(() => {
-        get().connect()
-      }, Math.min(delay, 10000)) // Max 10 seconds delay
+      setTimeout(
+        () => {
+          get().connect()
+        },
+        Math.min(delay, 10000)
+      ) // Max 10 seconds delay
     },
 
     // Game Actions
@@ -351,9 +355,7 @@ const SocketStoreContext = createContext<typeof useSocketStore | null>(null)
 
 export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   return (
-    <SocketStoreContext.Provider value={useSocketStore}>
-      {children}
-    </SocketStoreContext.Provider>
+    <SocketStoreContext.Provider value={useSocketStore}>{children}</SocketStoreContext.Provider>
   )
 }
 

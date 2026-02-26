@@ -1,0 +1,7 @@
+export const JOIN_GAME = 'join_game'
+export const INITIAL_STATE = 'initialState'
+export const MOVE = 'move'
+export const SPLIT = 'split'
+export const SPIT = 'spit'
+export const GAME_STATE = 'game_state'
+export const ERROR = 'error'

@@ -74,6 +74,7 @@ export interface GameState {
   maxPlayers: number
   minPlayers: number
   winner?: string
+  hostId?: string
   lastUpdate: number
 }
 
@@ -82,7 +83,7 @@ export enum GameStatus {
   STARTING = 'starting',
   PLAYING = 'playing',
   ENDING = 'ending',
-  FINISHED = 'finished'
+  FINISHED = 'finished',
 }
 
 export interface GameConfig {
@@ -213,7 +214,7 @@ export enum ConnectionStatus {
   CONNECTING = 'connecting',
   CONNECTED = 'connected',
   RECONNECTING = 'reconnecting',
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 // Camera and viewport types
@@ -264,7 +265,7 @@ export enum EffectType {
   SPLIT = 'split',
   SPIT = 'spit',
   DEATH = 'death',
-  SPAWN = 'spawn'
+  SPAWN = 'spawn',
 }
 
 // Audio types

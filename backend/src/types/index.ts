@@ -26,8 +26,17 @@ export interface Boundary {
   bottom: number
 }
 
+export const RoomStatus = {
+  WAITING: 'waiting',
+  STARTING: 'starting',
+  PLAYING: 'playing',
+}
+
 export interface GameState {
   timestamp: number // ms since epoch
+  status: typeof RoomStatus // PLAYING, STARTING, …
+  startTime?: number
+  hostId?: string
   players: PlayerState[]
   knibbles: KnibbleState[]
   boundary: Boundary

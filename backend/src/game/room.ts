@@ -12,7 +12,17 @@ import * as events from './events.ts'
 import { Physics } from './physics.ts'
 import { Player } from './player.ts'
 
+export const RoomStatus = {
+  WAITING: 'waiting',
+  STARTING: 'starting',
+  PLAYING: 'playing',
+}
+
 export class GameRoom {
+  status = RoomStatus.WAITING
+  hostId!: string // first player that joined
+  startTime?: number // timestamp when the match actually starts
+
   private config: RoomConfig
   private players = new Map<string, Player>()
   private sockets = new Map<string, Socket>()
@@ -32,10 +42,32 @@ export class GameRoom {
   toPlain() {} // serialise for JSON
   // static fromPlain(o: any): GameRoom {};   // re‑create instance
 
+  startCountdown() {
+    if (this.status !== RoomStatus.WAITING) return
+
+    this.status = RoomStatus.STARTING
+    const countdownMs = 5000 // 5 s countdown
+    this.startTime = Date.now() + countdownMs
+
+    const startingState = this.getGameState() // includes status, startTime, hostId …
+    this.broadcast(startingState)
+
+    setTimeout(() => {
+      this.status = RoomStatus.PLAYING
+      this.startTime = Date.now() // actual start time
+      const startingState = this.getGameState()
+      this.broadcast(startingState) // send PLAYING state
+    }, countdownMs)
+  }
+
   /* ---------- Player Management ---------- */
 
   addPlayer(socketId: string, playerName: string, socket: Socket): Player {
     const player = new Player({ id: socketId, name: playerName, x: 1000, y: 1000, radius: 20 })
+    // The very first player becomes the host
+    if (this.players.size === 0) {
+      this.hostId = socketId
+    }
     this.players.set(socketId, player)
     this.sockets.set(socketId, socket) // keep a parallel map
     return player
@@ -177,6 +209,7 @@ export class GameRoom {
         radius: p.radius,
         color: p.color,
       })),
+      hostId: this.hostId,
       knibbles: this.knibbles,
       boundary: this.boundary,
     }

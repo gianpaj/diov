@@ -17,6 +17,7 @@ const WaitingRoom: React.FC = () => {
     onPlayerLeft,
     onGameStarted,
     leaveGame,
+    startGame,
   } = useSocketStore()
 
   const { gameState, uiState, updateUIState, gameConfig, setGameState } = useGameStore()
@@ -125,6 +126,11 @@ const WaitingRoom: React.FC = () => {
         return '#DDA0DD'
     }
   }
+  const handleStartGame = () => {
+    // emit the custom event to the server
+    startGame()
+    navigate('/game')
+  }
 
   if (countdown !== null) {
     return (
@@ -137,6 +143,12 @@ const WaitingRoom: React.FC = () => {
       </div>
     )
   }
+
+  const isHost = true
+  // const isHost = uiState.socket?.id === gameState?.hostId
+  // canStartGame && uiState.playerName === gameState?.hostId
+
+  // console.log({ uiState, gameState })
 
   return (
     <div className='waiting-room'>
@@ -201,6 +213,16 @@ const WaitingRoom: React.FC = () => {
               <div className='progress-text'>
                 {canStartGame ? 'Ready!' : `${minPlayers - playerCount} more needed`}
               </div>
+              {canStartGame && isHost && (
+                <button
+                  className='btn btn-primary'
+                  onClick={handleStartGame}
+                  type='button'
+                  style={{ marginTop: '1rem' }}
+                >
+                  <Play size={18} /> Start Game
+                </button>
+              )}
             </div>
           </div>
 
@@ -233,7 +255,7 @@ const WaitingRoom: React.FC = () => {
 
               {/* Empty slots */}
               {Array.from({ length: maxPlayers - playerCount }).map((_, index) => (
-                <div key={`empty-${index}`} className='player-item empty-slot'>
+                <div key={`empty-${index + 1}`} className='player-item empty-slot'>
                   <div className='player-avatar'>
                     <div className='avatar-circle empty'>
                       <Users size={16} />

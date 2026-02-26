@@ -3,21 +3,21 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { io, Socket } from 'socket.io-client'
 import {
-  SocketMessage,
-  GameState,
+  type SocketMessage,
+  type GameState,
   Player,
   ConnectionStatus,
-  JoinGameMessage,
-  PlayerInputMessage,
+  type JoinGameMessage,
+  type PlayerInputMessage,
   GameStateMessage,
-  PlayerJoinedMessage,
-  PlayerLeftMessage,
-  GameStartedMessage,
-  GameEndedMessage,
-  PlayerEatenMessage,
-  KnibbleSpawnedMessage,
-  ErrorMessage,
-  PlayerInput,
+  type PlayerJoinedMessage,
+  type PlayerLeftMessage,
+  type GameStartedMessage,
+  type GameEndedMessage,
+  type PlayerEatenMessage,
+  type KnibbleSpawnedMessage,
+  type ErrorMessage,
+  type PlayerInput,
 } from '@/types'
 
 interface SocketStore {
@@ -39,6 +39,7 @@ interface SocketStore {
   // Game Actions
   joinGame: (playerName: string) => void
   leaveGame: () => void
+  startGame: () => void
   sendPlayerInput: (input: PlayerInput) => void
   sendMessage: (message: SocketMessage) => void
 
@@ -199,6 +200,13 @@ export const useSocketStore = create<SocketStore>()(
       }
 
       socket.emit('join_game', message.data)
+    },
+
+    startGame: () => {
+      const { socket, isConnected } = get()
+      if (!socket || !isConnected) return
+
+      socket.emit('start_game')
     },
 
     leaveGame: () => {

@@ -1,11 +1,11 @@
 // import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import { GameProvider } from '@/stores/GameStore'
-import { SocketProvider } from '@/stores/SocketStore'
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
+import GamePage from '@/components/GamePage'
 import HomePage from '@/components/HomePage'
 import WaitingRoom from '@/components/WaitingRoom'
-import GamePage from '@/components/GamePage'
 import { useOrientation } from '@/hooks/useOrientation'
+import { GameProvider } from '@/stores/GameStore'
+import { SocketProvider } from '@/stores/SocketStore'
 
 function App() {
   const { isLandscape } = useOrientation()

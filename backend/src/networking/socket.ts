@@ -16,8 +16,15 @@ export function socketMiddleware(io: SocketIOServer, engine: GameEngine) {
       const room = engine.getOrCreateRoom(payload.roomId)
       const player = room.addPlayer(socket.id, payload.playerName, socket)
 
+      // Only the host may start
+      if (socket.id !== room.hostId) {
+        socket.emit('error', { message: 'Only the host can start the game' })
+        return
+      }
       // Send initial state
       socket.emit(events.GAME_STATE, room.getGameState())
+
+      room.startCountdown()
     })
 
     // 2️⃣ Handle player input

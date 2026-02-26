@@ -11,6 +11,37 @@ A multiplayer 2D webapp game where players compete to eat each other and become 
 
 **Battle Circles** is a fast-paced multiplayer battle royale game where players control circles that grow by eating smaller opponents and collectibles. The last circle standing wins!
 
+## High-level Architecture
+
+```txt
+┌───────────────────────┐
+│  Front‑end (React +   │
+│  PIXI, socket.io‑cli) │
+└───────▲───────────────┘
+        │ websocket   ▲
+        │             │
+┌───────▼───────────────┐  ┌───────────────────────┐
+│  HTTP/WS Server (Node) │  │   Database Layer       │
+│    Express + Socket.io │  │   ┌─────────────────┐ │
+│  • Matchmaking         │  │   │ PostgreSQL       │ │
+│  • Room Manager        │  │   │ (user stats)    │ │
+│  • Game Engine         │  │   └─────────────────┘ │
+│  • Redis Pub/Sub       │  │   ┌─────────────────┐ │
+│  • Auth / Rate‑limit   │  │   │ Redis (state)    │ │
+└───────▲───────────────┘  └───────────────────────┘
+        │             ▲
+        │ websocket   │
+        ▼             │
+  ┌─────────────────────┐
+  │  Docker/K8s (optional) │
+  └─────────────────────┘
+```
+
+- Authoritative server – Only the back‑end decides who wins and updates the world.
+- Room‑based – Each game is a sandbox; when a room ends, its state can be archived.
+- Horizontal scaling – If you need more capacity, spin up another server and use Redis Pub/Sub to keep rooms in sync (or use a dedicated “room host” per instance).
+- Persistence – PostgreSQL for long‑term stats; Redis for the hot, mutable game state.
+
 ### Core Features
 
 - **Multiplayer Action**: 5-12 players per match

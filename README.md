@@ -1,16 +1,5 @@
 # Battle Circles
 
-A multiplayer 2D webapp game where players compete to eat each other and become the last circle standing.
-
-![Battle Circles](https://img.shields.io/badge/Game-Battle%20Circles-blue)
-![React](https://img.shields.io/badge/React-18.2.0-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.2.2-blue)
-![PIXI.js](https://img.shields.io/badge/PIXI.js-7.3.2-green)
-
-## 🎮 Game Overview
-
-**Battle Circles** is a fast-paced multiplayer battle royale game where players control circles that grow by eating smaller opponents and collectibles. The last circle standing wins!
-
 ## High-level Architecture
 
 ```txt
@@ -36,309 +25,315 @@ A multiplayer 2D webapp game where players compete to eat each other and become 
   │  Docker/K8s (optional) │
   └─────────────────────┘
 ```
+A real-time multiplayer browser game where players control circles, eat smaller opponents, and compete to be the last one standing. Built as a mobile-first web app with landscape orientation.
 
-- Authoritative server – Only the back‑end decides who wins and updates the world.
-- Room‑based – Each game is a sandbox; when a room ends, its state can be archived.
-- Horizontal scaling – If you need more capacity, spin up another server and use Redis Pub/Sub to keep rooms in sync (or use a dedicated “room host” per instance).
-- Persistence – PostgreSQL for long‑term stats; Redis for the hot, mutable game state.
+![Status](https://img.shields.io/badge/Status-In%20Development-orange)
+![React](https://img.shields.io/badge/React-18.2-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.2-blue)
+![PIXI.js](https://img.shields.io/badge/PIXI.js-7.3-green)
 
-### Core Features
-
-- **Multiplayer Action**: 5-12 players per match
-- **Fast-Paced Rounds**: 5-minute time limit
-- **Size-Based Combat**: Eat smaller players to grow
-- **Dynamic Map**: Shrinking boundaries force confrontation
-- **Special Abilities**: Split and spit mechanics
-- **Mobile-First**: Optimized for landscape mobile gameplay
-
-### Game Mechanics
-
-- Move with virtual joystick (left side of screen)
-- Eat players smaller than you to grow
-- Collect knibbles (food) that spawn randomly
-- Use split button to divide into multiple pieces
-- Use spit button to lose size and gain speed
-- Avoid the shrinking map boundaries
-- Survive until you're the last one standing!
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js (20.0.0 or higher)
-- pnpm (9.0.0 or higher)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd diov
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
-
-3. **Start the development server**
-   ```bash
-   pnpm run dev
-   ```
-
-4. **Open your browser**
-   Navigate to `http://localhost:3000`
-
-## 🛠️ Development
-
-### Available Scripts
-
-- `pnpm run dev` - Start development server
-- `pnpm run build` - Build for production
-- `pnpm run preview` - Preview production build
-- `pnpm run lint` - Run ESLint
-- `pnpm run lint:fix` - Fix ESLint issues
-- `pnpm run format` - Format code with Prettier
-- `pnpm run type-check` - Run TypeScript type checking
-- `pnpm test` - Run tests
-
-### Project Structure
-
-```
-diov/
-├── src/
-│   ├── components/          # React components
-│   │   ├── game/           # Game-specific components
-│   │   └── ui/             # Reusable UI components
-│   ├── game/               # Game logic and systems
-│   │   ├── entities/       # Game entities (Player, Knibble, etc.)
-│   │   └── systems/        # Game systems (Physics, Rendering, etc.)
-│   ├── hooks/              # Custom React hooks
-│   ├── stores/             # State management (Zustand)
-│   ├── types/              # TypeScript type definitions
-│   ├── utils/              # Utility functions
-│   └── assets/             # Static assets
-├── public/                 # Public assets
-└── index.html              # Entry HTML file
-```
-
-### Key Technologies
-
-- **Frontend Framework**: React 18 with TypeScript
-- **Game Engine**: PIXI.js with @pixi/react
-- **State Management**: Zustand
-- **Networking**: Socket.io
-- **Build Tool**: Vite
-- **Icons**: Lucide React
-- **Styling**: CSS-in-JS with styled-jsx
-
-## 🎯 Game Controls
-
-### Mobile Controls (Landscape Mode Required)
-
-- **Virtual Joystick** (Left): Move your circle
-- **Split Button** (Right, Top): Split into multiple pieces
-- **Spit Button** (Right, Bottom): Spit to lose size and gain speed
-- **Pause Button** (Top, Left): Pause the game
-
-### Desktop Controls (for testing)
-
-- **Mouse**: Control virtual joystick
-- **Keyboard**: Same button functionality
-
-## 🏗️ Architecture
-
-### Frontend Architecture
-
-- **Component-Based**: Modular React components
-- **State Management**: Centralized state with Zustand
-- **Real-time Updates**: WebSocket communication
-- **Game Rendering**: Hardware-accelerated PIXI.js
-- **Mobile-First**: Responsive design with touch controls
-
-### Game Systems
-
-- **Entity System**: Players, Knibbles, SpitBlobs
-- **Physics System**: Movement, collision detection
-- **Networking**: Client prediction with server reconciliation
-- **Camera System**: Smooth following with viewport management
-- **Input System**: Touch and mouse input handling
-
-## 🌐 Networking
-
-The game uses WebSocket connections for real-time multiplayer functionality:
-
-- **Connection Management**: Auto-reconnection with exponential backoff
-- **Game State Sync**: Server-authoritative with client prediction
-- **Latency Compensation**: Input prediction and reconciliation
-- **Anti-Cheat**: Server-side validation of all game actions
-
-## 📱 Mobile Optimization
-
-- **Landscape Mode**: Enforced landscape orientation
-- **Touch Controls**: Optimized virtual joystick and buttons
-- **Performance**: 60 FPS target on mobile devices
-- **Network**: Optimized for mobile networks
-- **PWA Support**: Installable as Progressive Web App
-
-## 🎨 Customization
-
-### Adding New Player Colors
-
-Edit `src/types/game.ts`:
-
-```typescript
-export const COLORS = {
-  PLAYER_COLORS: [
-    '#FF6B6B', // Add your colors here
-    // ... existing colors
-  ],
-}
-```
-
-### Adjusting Game Balance
-
-Edit `src/stores/GameStore.tsx`:
-
-```typescript
-const defaultGameConfig: GameConfig = {
-  maxPlayers: 12,        // Maximum players per game
-  minPlayers: 5,         // Minimum players to start
-  gameDuration: 300000,  // Game length in milliseconds
-  // ... other config options
-}
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Game won't load**
-   - Check browser console for errors
-   - Ensure you're using a modern browser
-   - Clear browser cache and reload
-
-2. **Connection issues**
-   - Check network connectivity
-   - Verify server is running (if using local server)
-   - Check browser's developer tools for WebSocket errors
-
-3. **Performance issues**
-   - Close other applications
-   - Ensure device has sufficient memory
-   - Try reducing browser zoom level
-
-4. **Touch controls not working**
-   - Ensure device is in landscape mode
-   - Check if touch events are being blocked
-   - Try refreshing the page
-
-### Browser Compatibility
-
-- **Chrome**: 90+ (Recommended)
-- **Firefox**: 88+
-- **Safari**: 14+
-- **Edge**: 90+
-
-## 📈 Performance Optimization
-
-### Rendering Performance
-
-- Object pooling for game entities
-- Spatial partitioning for collision detection
-- Viewport culling for off-screen objects
-- Frame rate monitoring and adjustment
-
-### Network Performance
-
-- Message batching and compression
-- Delta compression for state updates
-- Bandwidth monitoring
-- Mobile network optimization
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow TypeScript strict mode
-- Use ESLint and Prettier for code formatting
-- Write unit tests for new features
-- Ensure mobile compatibility
-- Test on multiple devices and browsers
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🎊 Acknowledgments
-
-- **PIXI.js** - Amazing 2D rendering engine
-- **React** - Fantastic UI framework
-- **Socket.io** - Real-time communication
-- **Lucide** - Beautiful icons
-- **Zustand** - Simple state management
-
-## 🔮 Future Roadmap
-
-See [ROADMAP.md](ROADMAP.md) for detailed development phases and upcoming features.
-
-### Planned Features
-
-- [ ] Player customization (skins, themes)
-- [ ] Power-ups and special abilities
-- [ ] Tournaments and ranked play
-- [ ] Social features (friends, private lobbies)
-- [ ] Native mobile apps
-- [ ] Spectator mode
-- [ ] Replay system
-- [ ] Analytics and player statistics
+> ⚠️ **Work in progress.** The frontend renders and the backend runs in isolation, but they are not yet fully connected. See [TODO.md](TODO.md) for the full list of blocking issues.
 
 ---
 
-**Ready to battle?** Start the game and become the ultimate circle champion! 🏆
+## Game Overview
 
+Players join a lobby, wait for others, then battle in a shrinking arena:
 
-## Other Concept Ideas
+- Move with a virtual joystick (left side of screen)
+- Eat players smaller than you to grow
+- Collect knibbles (food pellets) that spawn randomly
+- Use **Split** to divide into multiple pieces
+- Use **Spit** to eject mass and gain a speed burst
+- Avoid the shrinking map boundaries
+- Last circle standing wins
 
+**Match size**: 2–12 players | **Round length**: 5 minutes
 
-1. **Blob Royale**
+---
 
-Theme: Colorful goo creatures in a fast-paced shrinking arena
-Key Mechanics Differences:
--	Sticky Trails: As players move, they leave behind a sticky trail for 3 seconds. Others slow down if they cross it, allowing ambushes.
--	Combo Bites: Eating two players within 10 seconds triggers a "combo" that gives a short speed boost.
--	Power Blob Events: Every 30 seconds, a super-knibble spawns and grants temporary invincibility (can't be eaten but can eat anyone smaller).
+## Architecture
 
-Casual Appeal: Chaotic fun with visual feedback and low skill floor; more forgiving and flashy.
+```
+┌─────────────────────────────┐
+│  Frontend (React + PIXI.js) │
+│  Vite · Zustand · Socket.io │
+└────────────┬────────────────┘
+             │ WebSocket (Socket.io)
+┌────────────▼────────────────┐   ┌─────────────────────────┐
+│  Backend (Node + Express 5) │   │  Persistence (planned)  │
+│  Socket.io · Game Engine    │   │  Redis  · PostgreSQL    │
+│  Room Manager · Physics     │   │  (not yet connected)    │
+└─────────────────────────────┘   └─────────────────────────┘
+```
 
-2. **Nibble Rush**
+- **Authoritative server** — only the backend decides positions and collisions.
+- **Room-based** — each game is an isolated `GameRoom` instance.
+- **In-memory state** — active game state lives in a `Map<roomId, GameRoom>`.
+- **Redis / PostgreSQL** — wired in config but not yet active (see TODO).
 
-Theme: Candy-like world where you munch to grow
-Key Mechanics Differences:
-- Boost Zones: Certain areas on the map give players a temporary speed boost if passed over.
-- Shrink Bombs: A third button allows you to drop a "shrink bomb" that slightly shrinks everyone in range, including yourself (use strategically).
-- Knibble Types: Some knibbles explode, some shrink you slightly, some give double size. Adds casual risk-reward decision making.
+---
 
-Casual Appeal: Whimsical, unpredictable, quick rounds with low punishment.
+## Tech Stack
 
-3. **Circle Splitz**
+| Layer | Technology |
+|---|---|
+| Frontend framework | React 18 + TypeScript |
+| Game rendering | PIXI.js 7 via `@pixi/react` |
+| State management | Zustand (with `subscribeWithSelector`) |
+| Networking | Socket.io-client (frontend) / Socket.io (backend) |
+| Backend runtime | Node.js 20 + Express 5 |
+| Build tool | Vite 5 + `vite-plugin-pwa` |
+| Validation | Zod (backend config + move payloads) |
+| Linting / formatting | ESLint + Prettier |
+| Testing | Vitest (frontend, no tests written yet) |
 
-Theme: Geometric minimalism with arcade flair
-Key Mechanics Differences:
-- Chain Split Mechanic: You can split more than once in succession, creating up to 20 micro-circles. Perfect control yields big rewards, while poor control leads to chaos.
-- Merge Timer: After splitting, players can only merge again after 10 seconds (forces strategy).
-- Mirror Clone Power-Up: Occasionally clones your circle for 10 seconds—confuses opponents as both can eat, but only one is real.
+---
 
-Casual Appeal: Tactile, strategic, but visually minimal for players who enjoy clever plays and deception.
+## Project Structure
 
-## Research TODO
+```
+diov/                          ← frontend
+├── src/
+│   ├── App.tsx                ← root; enforces landscape mode
+│   ├── components/
+│   │   ├── HomePage.tsx       ← name entry + join
+│   │   ├── WaitingRoom.tsx    ← lobby + countdown
+│   │   ├── GamePage.tsx       ← PIXI stage + UI overlay
+│   │   └── game/
+│   │       ├── ActionButtons.tsx
+│   │       ├── GameHUD.tsx
+│   │       ├── GameOverScreen.tsx
+│   │       └── VirtualJoystick.tsx
+│   ├── game/
+│   │   ├── entities/          ← (empty — planned)
+│   │   └── systems/           ← (empty — planned)
+│   ├── hooks/
+│   │   ├── useJoystick.ts
+│   │   └── useOrientation.ts
+│   ├── stores/
+│   │   ├── GameStore.tsx      ← game state, camera, input
+│   │   └── SocketStore.tsx    ← socket connection + events
+│   ├── types/
+│   │   └── game.ts            ← all shared types + constants
+│   └── utils/                 ← (empty — planned)
+├── public/                    ← (empty — PWA icons missing)
+├── vite.config.ts
+└── package.json
 
-- [Colyseus](https://github.com/colyseus/colyseus) - Typescript
-- nengi.js
-- Nodecraft or Heroic Cloud
+diov/backend/                  ← backend
+├── src/
+│   ├── server.ts              ← Express + Socket.io entry
+│   ├── config.ts              ← Zod-validated env config
+│   ├── game/
+│   │   ├── engine.ts          ← room registry + tick loop
+│   │   ├── room.ts            ← GameRoom: state + physics tick
+│   │   ├── player.ts          ← Player entity
+│   │   ├── physics.ts         ← move + collision
+│   │   └── events.ts          ← socket event name constants
+│   ├── networking/
+│   │   ├── socket.ts          ← all socket.on() handlers
+│   │   └── validators.ts      ← Zod move schema
+│   ├── persistence/
+│   │   ├── inmemory.ts        ← active in-memory store
+│   │   ├── db.ts              ← Prisma client (not installed)
+│   │   ├── redis.ts           ← Upstash Redis (not wired up)
+│   │   └── autoSave.ts        ← JSON file save/load (incomplete)
+│   ├── database/              ← (empty — schema not created)
+│   └── types/
+│       └── index.ts           ← PlayerState, GameState, etc.
+└── package.json
+```
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 20+
+- pnpm 9+
+
+### 1. Install frontend dependencies
+
+```bash
+cd diov
+pnpm install
+```
+
+### 2. Install backend dependencies
+
+```bash
+cd diov/backend
+pnpm install
+```
+
+> Several packages are missing from `backend/package.json`. Until they are added you will see install/runtime errors. See [TODO.md](TODO.md).
+
+### 3. Configure the backend
+
+```bash
+# No .env.example exists yet — create backend/.env manually:
+cp /dev/null diov/backend/.env
+```
+
+Add the following to `diov/backend/.env`:
+
+```
+PORT=3001
+TICK_RATE=50
+MAX_PLAYERS_PER_ROOM=12
+MIN_PLAYERS_PER_ROOM=2
+MAX_SPEED=5
+MAP_WIDTH=2000
+MAP_HEIGHT=2000
+REDIS_URL=redis://localhost:6379
+DATABASE_URL=postgres://user:pass@localhost:5432/battle_circles
+CORS_ORIGIN=*
+NODE_ENV=development
+```
+
+> `REDIS_URL` and `DATABASE_URL` are required by the Zod schema even though neither service is active yet. Provide any syntactically valid value.
+
+### 4. Start the backend
+
+```bash
+cd diov/backend
+pnpm run dev
+# → http://localhost:3001
+```
+
+### 5. Start the frontend
+
+```bash
+cd diov
+pnpm run dev
+# → http://localhost:3000
+```
+
+Navigate to `http://localhost:3000` in a landscape browser window or mobile device.
+
+---
+
+## Available Scripts
+
+### Frontend (`diov/`)
+
+| Script | Description |
+|---|---|
+| `pnpm run dev` | Start Vite dev server on port 3000 |
+| `pnpm run build` | Type-check + Vite production build |
+| `pnpm run preview` | Preview production build |
+| `pnpm run lint` | Run ESLint |
+| `pnpm run lint:fix` | Auto-fix ESLint issues |
+| `pnpm run format` | Format with Prettier |
+| `pnpm run type-check` | Run `tsc --noEmit` |
+| `pnpm test` | Run Vitest |
+
+### Backend (`diov/backend/`)
+
+| Script | Description |
+|---|---|
+| `pnpm run dev` | Start with nodemon (needs tsx/ts-node) |
+| `pnpm run start` | Run with node directly |
+
+---
+
+## Game Controls
+
+### Mobile (landscape required)
+
+| Control | Action |
+|---|---|
+| Virtual joystick (left) | Move |
+| Split button (right, top) | Split into pieces |
+| Spit button (right, bottom) | Eject mass for speed |
+| Pause button (top left) | Pause / leave |
+
+### Desktop (testing)
+
+Mouse controls the virtual joystick. Same buttons apply.
+
+---
+
+## Known Issues
+
+The game is not yet end-to-end functional. The most critical blockers are:
+
+1. **Event name mismatch** — frontend emits `player_input`; backend listens for `move`. Players cannot move.
+2. **`join_game` breaks non-host players** — the handler returns early for anyone who isn't the room host, so only the host receives game state.
+3. **No `roomId` sent on join** — `getOrCreateRoom(undefined)` always resolves the same accidental room.
+4. **Frontend and backend `GameState` shapes are incompatible** — different field names (`position` vs `x`/`y`, `size` vs `radius`, array vs record).
+5. **`styled-jsx` not installed** — every component with `<style jsx>` produces TypeScript errors.
+6. **Backend missing dependencies** — `socket.io`, `uuid`, `dotenv`, `typescript`, `tsx` not in `package.json`.
+7. **No `.env.example`** — backend crashes at startup from a fresh clone.
+
+See [TODO.md](TODO.md) for the complete prioritised list.
+
+---
+
+## Troubleshooting
+
+**Backend crashes immediately on startup**
+→ Missing or invalid `.env` file. The Zod config validator throws on any missing variable. See step 3 above.
+
+**Frontend compiles but shows TypeScript errors**
+→ `styled-jsx` is not installed. Run `pnpm add styled-jsx` in `diov/` and add the Vite plugin, or convert styles to CSS modules.
+
+**"Loading game…" spinner never goes away**
+→ `gameState` and `localPlayer` are both `null` in `GameStore`. This means the socket is not receiving a `game_state` event from the backend. Check the event name mismatch (issue #1 and #2 above).
+
+**Players can't move**
+→ Frontend emits `player_input`; backend listens for `move`. See issue #1.
+
+**Device must be in landscape mode**
+→ `App.tsx` renders a rotation prompt if `window.innerWidth <= window.innerHeight`. Rotate your device or resize your browser window to be wider than tall.
+
+**Touch controls not responding**
+→ `main.tsx` calls `e.preventDefault()` on all `touchstart` and `touchmove` events globally. This can interfere with scroll in portrait testing. In landscape game mode this is intentional.
+
+---
+
+## Browser Compatibility
+
+| Browser | Minimum version |
+|---|---|
+| Chrome / Chromium | 90+ (recommended) |
+| Firefox | 88+ |
+| Safari | 14+ |
+| Edge | 90+ |
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b fix/event-name-mismatch`
+3. Make your changes, ensuring `pnpm run type-check` and `pnpm run lint` pass
+4. Commit: `git commit -m 'fix: align socket event names frontend ↔ backend'`
+5. Push and open a Pull Request
+
+Please read [AGENTS.md](AGENTS.md) before making changes — it documents all known issues and architectural decisions in detail.
+
+---
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for detailed phase planning.
+
+**Planned features (post-MVP)**
+
+- [ ] Player customization (skins, colours)
+- [ ] Matchmaking and multiple rooms
+- [ ] Persistent player stats (PostgreSQL)
+- [ ] Redis pub/sub for horizontal scaling
+- [ ] Spectator mode
+- [ ] Replay system
+- [ ] Native mobile apps
+- [ ] Tournaments and ranked play
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE) for details.

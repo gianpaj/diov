@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/server.ts",
+    "dev": "nodemon --exec tsx src/server.ts",
     "start": "node src/server.ts"
   },
   "keywords": [],
@@ -14,8 +14,12 @@
   "type": "module",
   "dependencies": {
     "cors": "^2.8.6",
-    "nodemon": "3.1.11",
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "nodemon": "3.1.11",
+    "socket.io": "^4.8.3",
+    "tsx": "^4.21.0",
+    "uuid": "^13.0.0",
     "zod": "^4.3.6"
   }
 }

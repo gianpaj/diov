@@ -60,10 +60,10 @@ const EnvSchema = z.object({
     .refine(n => !Number.isNaN(n), { message: 'MAP_HEIGHT must be a number' }),
 
   /* --- Redis ------------------------------------------------------ */
-  REDIS_URL: z.string().url(),
+  REDIS_URL: z.url().optional(),
 
   /* --- PostgreSQL ----------------------------------------------- */
-  DATABASE_URL: z.string(), // postgres://user:pass@host/db
+  DATABASE_URL: z.string().optional(), // postgres://user:pass@host/db
 
   /* --- Security --------------------------------------------------- */
   CORS_ORIGIN: z.string().default('*'),

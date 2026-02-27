@@ -138,6 +138,12 @@ export const useSocketStore = create<SocketStore>()(
         const latency = now - get().lastPingTime
         get().updateLatency(latency)
       })
+      // Pong handler for latency measurement
+      newSocket.on('start_game', () => {
+        const now = Date.now()
+        const latency = now - get().lastPingTime
+        get().updateLatency(latency)
+      })
 
       set({ socket: newSocket })
     },

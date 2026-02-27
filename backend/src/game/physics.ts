@@ -1,35 +1,72 @@
-import type { Boundary, KnibbleState, PlayerState } from '../types'
+import type { Boundary } from '../types/index.ts'
 
+/**
+ * Pure physics helpers used by `GameRoom`.
+ *
+ * All methods operate on plain numeric coordinates so this class stays
+ * completely ignorant of networking and entity management.
+ */
 export class Physics {
-  // Clamp within boundary
-  move(player: PlayerState, b: Boundary) {
-    player.x += player.velocityX ?? 0
-    player.y += player.velocityY ?? 0
+  /**
+   * Advance a player's position by its current velocity and bounce it off
+   * the room boundary.
+   *
+   * `boundary` uses `{ x, y, width, height }` – the top-left corner plus
+   * dimensions – matching the wire format sent to the frontend.
+   */
+  move(
+    player: { x: number; y: number; radius: number; velocityX: number; velocityY: number },
+    b: Boundary
+  ) {
+    player.x += player.velocityX
+    player.y += player.velocityY
 
-    // Simple bounce
-    if (player.x - player.radius < b.left) {
-      player.x = b.left + player.radius
-      player.velocityX = -player.velocityX!
+    const minX = b.x + player.radius
+    const maxX = b.x + b.width - player.radius
+    const minY = b.y + player.radius
+    const maxY = b.y + b.height - player.radius
+
+    // Horizontal bounce
+    if (player.x < minX) {
+      player.x = minX
+      player.velocityX = Math.abs(player.velocityX)
+    } else if (player.x > maxX) {
+      player.x = maxX
+      player.velocityX = -Math.abs(player.velocityX)
     }
-    if (player.x + player.radius > b.right) {
-      player.x = b.right - player.radius
-      player.velocityX = -player.velocityX!
-    }
-    if (player.y - player.radius < b.top) {
-      player.y = b.top + player.radius
-      player.velocityY = -player.velocityY!
-    }
-    if (player.y + player.radius > b.bottom) {
-      player.y = b.bottom - player.radius
-      player.velocityY = -player.velocityY!
+
+    // Vertical bounce
+    if (player.y < minY) {
+      player.y = minY
+      player.velocityY = Math.abs(player.velocityY)
+    } else if (player.y > maxY) {
+      player.y = maxY
+      player.velocityY = -Math.abs(player.velocityY)
     }
   }
 
-  isColliding(a: PlayerState | KnibbleState, b: PlayerState | KnibbleState) {
-    const dx = a.x - b.x
-    const dy = a.y - b.y
+  /**
+   * Circle–circle overlap test using entity objects that expose
+   * `x`, `y`, and `radius` fields.
+   */
+  isColliding(
+    a: { x: number; y: number; radius: number },
+    b: { x: number; y: number; radius: number }
+  ): boolean {
+    return this.isCollidingFlat(a.x, a.y, a.radius, b.x, b.y, b.radius)
+  }
+
+  /**
+   * Circle–circle overlap test using raw numbers.
+   * Useful when one of the entities stores its position inside a nested
+   * `position` object (e.g. `KnibbleState`) and you want to avoid the
+   * overhead of creating a temporary wrapper object.
+   */
+  isCollidingFlat(ax: number, ay: number, ar: number, bx: number, by: number, br: number): boolean {
+    const dx = ax - bx
+    const dy = ay - by
     const distSq = dx * dx + dy * dy
-    const radSum = a.radius + b.radius
+    const radSum = ar + br
     return distSq <= radSum * radSum
   }
 }

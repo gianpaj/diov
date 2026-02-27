@@ -5,11 +5,9 @@ import { io, Socket } from 'socket.io-client'
 import {
   type SocketMessage,
   type GameState,
-  Player,
   ConnectionStatus,
   type JoinGameMessage,
   type PlayerInputMessage,
-  GameStateMessage,
   type PlayerJoinedMessage,
   type PlayerLeftMessage,
   type GameStartedMessage,
@@ -19,6 +17,29 @@ import {
   type ErrorMessage,
   type PlayerInput,
 } from '@/types'
+
+// ── Event name constants (kept in sync with backend/src/game/events.ts) ────
+const EV_JOIN_GAME = 'join_game'
+const EV_START_GAME = 'start_game'
+const EV_LEAVE_GAME = 'leave_game'
+const EV_PLAYER_INPUT = 'player_input'
+const EV_GAME_STATE = 'game_state'
+const EV_PLAYER_JOINED = 'player_joined'
+const EV_PLAYER_LEFT = 'player_left'
+const EV_GAME_STARTED = 'game_started'
+const EV_GAME_ENDED = 'game_ended'
+const EV_PLAYER_EATEN = 'player_eaten'
+const EV_KNIBBLE_SPAWNED = 'knibble_spawned'
+const EV_ERROR = 'error'
+
+// For MVP all players land in the same room — matches DEFAULT_ROOM_ID in socket.ts
+const DEFAULT_ROOM_ID = 'global'
+
+const DEFAULT_SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+
+const MAX_RECONNECT_ATTEMPTS = 5
+const INITIAL_RECONNECT_DELAY = 1000
+const PING_INTERVAL = 5000
 
 interface SocketStore {
   // Connection State
@@ -30,6 +51,9 @@ interface SocketStore {
   reconnectDelay: number
   lastPingTime: number
   latency: number
+  /** ReturnType of setInterval for the ping loop — stored here instead of
+   *  on socket.data to avoid a TypeScript error. */
+  pingIntervalId: ReturnType<typeof setInterval> | null
 
   // Connection Actions
   connect: (serverUrl?: string) => void
@@ -43,7 +67,7 @@ interface SocketStore {
   sendPlayerInput: (input: PlayerInput) => void
   sendMessage: (message: SocketMessage) => void
 
-  // Event Handlers
+  // Event Handlers (each returns an unsubscribe function)
   onGameStateUpdate: (callback: (state: GameState) => void) => () => void
   onPlayerJoined: (callback: (data: PlayerJoinedMessage['data']) => void) => () => void
   onPlayerLeft: (callback: (data: PlayerLeftMessage['data']) => void) => () => void
@@ -59,16 +83,12 @@ interface SocketStore {
   incrementReconnectAttempts: () => void
   resetReconnectAttempts: () => void
   startPingMonitoring: () => void
+  stopPingMonitoring: () => void
 }
-
-const DEFAULT_SERVER_URL = import.meta.env.VITE_SERVER_URL || 'ws://localhost:3001'
-const MAX_RECONNECT_ATTEMPTS = 5
-const INITIAL_RECONNECT_DELAY = 1000
-const PING_INTERVAL = 5000
 
 export const useSocketStore = create<SocketStore>()(
   subscribeWithSelector((set, get) => ({
-    // Initial State
+    // ── Initial State ──────────────────────────────────────────────────────
     socket: null,
     isConnected: false,
     connectionStatus: ConnectionStatus.DISCONNECTED,
@@ -77,8 +97,10 @@ export const useSocketStore = create<SocketStore>()(
     reconnectDelay: INITIAL_RECONNECT_DELAY,
     lastPingTime: 0,
     latency: 0,
+    pingIntervalId: null,
 
-    // Connection Actions
+    // ── Connection Actions ─────────────────────────────────────────────────
+
     connect: (serverUrl = DEFAULT_SERVER_URL) => {
       const { socket, isConnected } = get()
 
@@ -94,10 +116,9 @@ export const useSocketStore = create<SocketStore>()(
         transports: ['websocket', 'polling'],
         timeout: 10000,
         forceNew: true,
-        reconnection: false, // We handle reconnection manually
+        reconnection: false, // manual reconnection handled below
       })
 
-      // Connection event handlers
       newSocket.on('connect', () => {
         console.log('Socket connected:', newSocket.id)
         set({
@@ -106,19 +127,18 @@ export const useSocketStore = create<SocketStore>()(
           connectionStatus: ConnectionStatus.CONNECTED,
         })
         get().resetReconnectAttempts()
-
-        // Start ping monitoring
         get().startPingMonitoring()
       })
 
       newSocket.on('disconnect', reason => {
         console.log('Socket disconnected:', reason)
+        get().stopPingMonitoring()
         set({
           isConnected: false,
           connectionStatus: ConnectionStatus.DISCONNECTED,
         })
 
-        // Attempt reconnection if not manually disconnected
+        // Reconnect unless the client intentionally disconnected
         if (reason !== 'io client disconnect') {
           setTimeout(() => get().reconnect(), get().reconnectDelay)
         }
@@ -127,21 +147,12 @@ export const useSocketStore = create<SocketStore>()(
       newSocket.on('connect_error', error => {
         console.error('Socket connection error:', error)
         set({ connectionStatus: ConnectionStatus.ERROR })
-
-        // Attempt reconnection
         setTimeout(() => get().reconnect(), get().reconnectDelay)
       })
 
-      // Pong handler for latency measurement
+      // Pong handler for round-trip latency measurement
       newSocket.on('pong', () => {
-        const now = Date.now()
-        const latency = now - get().lastPingTime
-        get().updateLatency(latency)
-      })
-      // Pong handler for latency measurement
-      newSocket.on('start_game', () => {
-        const now = Date.now()
-        const latency = now - get().lastPingTime
+        const latency = Date.now() - get().lastPingTime
         get().updateLatency(latency)
       })
 
@@ -149,6 +160,7 @@ export const useSocketStore = create<SocketStore>()(
     },
 
     disconnect: () => {
+      get().stopPingMonitoring()
       const { socket } = get()
       if (socket) {
         socket.disconnect()
@@ -170,28 +182,21 @@ export const useSocketStore = create<SocketStore>()(
       }
 
       console.log(`Reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}`)
-      set({
-        connectionStatus: ConnectionStatus.RECONNECTING,
-      })
+      set({ connectionStatus: ConnectionStatus.RECONNECTING })
       get().incrementReconnectAttempts()
 
-      // Clean up existing socket
       if (socket) {
         socket.removeAllListeners()
         socket.disconnect()
       }
 
-      // Exponential backoff
-      const delay = get().reconnectDelay * Math.pow(2, reconnectAttempts)
-      setTimeout(
-        () => {
-          get().connect()
-        },
-        Math.min(delay, 10000)
-      ) // Max 10 seconds delay
+      // Exponential backoff capped at 10 s
+      const delay = Math.min(get().reconnectDelay * Math.pow(2, reconnectAttempts), 10_000)
+      setTimeout(() => get().connect(), delay)
     },
 
-    // Game Actions
+    // ── Game Actions ───────────────────────────────────────────────────────
+
     joinGame: (playerName: string) => {
       const { socket, isConnected } = get()
       if (!socket || !isConnected) {
@@ -199,27 +204,27 @@ export const useSocketStore = create<SocketStore>()(
         return
       }
 
+      // Send roomId so the backend can route to the correct room.
+      // For MVP this is always 'global'; matchmaking can change it later.
       const message: JoinGameMessage = {
-        type: 'join_game',
+        type: EV_JOIN_GAME,
         data: { playerName },
         timestamp: Date.now(),
       }
 
-      socket.emit('join_game', message.data)
+      socket.emit(EV_JOIN_GAME, { playerName: message.data.playerName, roomId: DEFAULT_ROOM_ID })
     },
 
     startGame: () => {
       const { socket, isConnected } = get()
       if (!socket || !isConnected) return
-
-      socket.emit('start_game')
+      socket.emit(EV_START_GAME)
     },
 
     leaveGame: () => {
       const { socket, isConnected } = get()
       if (!socket || !isConnected) return
-
-      socket.emit('leave_game')
+      socket.emit(EV_LEAVE_GAME)
     },
 
     sendPlayerInput: (input: PlayerInput) => {
@@ -227,12 +232,13 @@ export const useSocketStore = create<SocketStore>()(
       if (!socket || !isConnected) return
 
       const message: PlayerInputMessage = {
-        type: 'player_input',
+        type: EV_PLAYER_INPUT,
         data: input,
         timestamp: Date.now(),
       }
 
-      socket.emit('player_input', message.data)
+      // Emit using the constant so it always matches the backend handler
+      socket.emit(EV_PLAYER_INPUT, message.data)
     },
 
     sendMessage: (message: SocketMessage) => {
@@ -241,92 +247,77 @@ export const useSocketStore = create<SocketStore>()(
         console.error('Cannot send message: not connected to server')
         return
       }
-
       socket.emit(message.type, message.data)
     },
 
-    // Event Handlers
+    // ── Event Handlers ─────────────────────────────────────────────────────
+
     onGameStateUpdate: (callback: (state: GameState) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
-
       const handler = (data: GameState) => callback(data)
-      socket.on('game_state', handler)
-
-      return () => socket.off('game_state', handler)
+      socket.on(EV_GAME_STATE, handler)
+      return () => socket.off(EV_GAME_STATE, handler)
     },
 
     onPlayerJoined: (callback: (data: PlayerJoinedMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
-
       const handler = (data: PlayerJoinedMessage['data']) => callback(data)
-      socket.on('player_joined', handler)
-
-      return () => socket.off('player_joined', handler)
+      socket.on(EV_PLAYER_JOINED, handler)
+      return () => socket.off(EV_PLAYER_JOINED, handler)
     },
 
     onPlayerLeft: (callback: (data: PlayerLeftMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
-
       const handler = (data: PlayerLeftMessage['data']) => callback(data)
-      socket.on('player_left', handler)
-
-      return () => socket.off('player_left', handler)
+      socket.on(EV_PLAYER_LEFT, handler)
+      return () => socket.off(EV_PLAYER_LEFT, handler)
     },
 
     onGameStarted: (callback: (data: GameStartedMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
-
       const handler = (data: GameStartedMessage['data']) => callback(data)
-      socket.on('game_started', handler)
-
-      return () => socket.off('game_started', handler)
+      socket.on(EV_GAME_STARTED, handler)
+      return () => socket.off(EV_GAME_STARTED, handler)
     },
 
     onGameEnded: (callback: (data: GameEndedMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
-
       const handler = (data: GameEndedMessage['data']) => callback(data)
-      socket.on('game_ended', handler)
-
-      return () => socket.off('game_ended', handler)
+      socket.on(EV_GAME_ENDED, handler)
+      return () => socket.off(EV_GAME_ENDED, handler)
     },
 
     onPlayerEaten: (callback: (data: PlayerEatenMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
-
       const handler = (data: PlayerEatenMessage['data']) => callback(data)
-      socket.on('player_eaten', handler)
-
-      return () => socket.off('player_eaten', handler)
+      socket.on(EV_PLAYER_EATEN, handler)
+      return () => socket.off(EV_PLAYER_EATEN, handler)
     },
 
     onKnibbleSpawned: (callback: (data: KnibbleSpawnedMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
-
       const handler = (data: KnibbleSpawnedMessage['data']) => callback(data)
-      socket.on('knibble_spawned', handler)
-
-      return () => socket.off('knibble_spawned', handler)
+      socket.on(EV_KNIBBLE_SPAWNED, handler)
+      return () => socket.off(EV_KNIBBLE_SPAWNED, handler)
     },
 
     onError: (callback: (data: ErrorMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
-
       const handler = (data: ErrorMessage['data']) => callback(data)
-      socket.on('error', handler)
-
-      return () => socket.off('error', handler)
+      socket.on(EV_ERROR, handler)
+      return () => socket.off(EV_ERROR, handler)
     },
 
-    // Internal Actions
+    // ── Internal Actions ───────────────────────────────────────────────────
+
     setConnectionStatus: (status: ConnectionStatus) => {
       set({ connectionStatus: status })
     },
@@ -343,28 +334,37 @@ export const useSocketStore = create<SocketStore>()(
       set({ reconnectAttempts: 0, reconnectDelay: INITIAL_RECONNECT_DELAY })
     },
 
-    // Helper method for ping monitoring (not exposed in interface)
     startPingMonitoring: () => {
+      // Clear any existing interval before starting a new one
+      get().stopPingMonitoring()
+
       const { socket } = get()
       if (!socket) return
 
-      const pingInterval = setInterval(() => {
+      const id = setInterval(() => {
         if (!get().isConnected) {
-          clearInterval(pingInterval)
+          get().stopPingMonitoring()
           return
         }
-
         set({ lastPingTime: Date.now() })
         socket.emit('ping')
       }, PING_INTERVAL)
 
-      // Store interval ID for cleanup
-      socket.data = { pingInterval }
+      set({ pingIntervalId: id })
+    },
+
+    stopPingMonitoring: () => {
+      const { pingIntervalId } = get()
+      if (pingIntervalId !== null) {
+        clearInterval(pingIntervalId)
+        set({ pingIntervalId: null })
+      }
     },
   }))
 )
 
-// Context for providing the store
+// ── React Context (thin wrapper so components can access the store) ──────────
+
 const SocketStoreContext = createContext<typeof useSocketStore | null>(null)
 
 export const SocketProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -381,7 +381,8 @@ export const useSocketContext = () => {
   return context()
 }
 
-// Auto-connection hook
+// ── Auto-connection hook ─────────────────────────────────────────────────────
+
 export const useAutoConnect = (autoConnect = true) => {
   const connect = useSocketStore(state => state.connect)
   const disconnect = useSocketStore(state => state.disconnect)
@@ -404,7 +405,8 @@ export const useAutoConnect = (autoConnect = true) => {
   return { isConnected }
 }
 
-// Selectors for optimized subscriptions
+// ── Selectors ────────────────────────────────────────────────────────────────
+
 export const socketSelectors = {
   isConnected: (state: ReturnType<typeof useSocketStore.getState>) => state.isConnected,
   connectionStatus: (state: ReturnType<typeof useSocketStore.getState>) => state.connectionStatus,
@@ -412,7 +414,8 @@ export const socketSelectors = {
   reconnectAttempts: (state: ReturnType<typeof useSocketStore.getState>) => state.reconnectAttempts,
 }
 
-// Custom hooks for common operations
+// ── Convenience hooks ────────────────────────────────────────────────────────
+
 export const useIsConnected = () => useSocketStore(socketSelectors.isConnected)
 export const useConnectionStatus = () => useSocketStore(socketSelectors.connectionStatus)
 export const useLatency = () => useSocketStore(socketSelectors.latency)

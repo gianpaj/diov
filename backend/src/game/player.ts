@@ -1,5 +1,21 @@
 // src/game/player.ts
-import type { PlayerState } from '../types'
+import type { PlayerState } from '../types/index.ts'
+
+// Palette that matches frontend COLORS.PLAYER_COLORS
+const PLAYER_COLORS = [
+  '#FF6B6B',
+  '#4ECDC4',
+  '#45B7D1',
+  '#96CEB4',
+  '#FFEAA7',
+  '#DDA0DD',
+  '#98D8C8',
+  '#F7DC6F',
+  '#BB8FCE',
+  '#85C1E9',
+  '#F8C471',
+  '#82E0AA',
+]
 
 /**
  * Options you pass when constructing a player.
@@ -7,83 +23,91 @@ import type { PlayerState } from '../types'
 export interface PlayerOptions {
   /** Socket.io id of the client. */
   id: string
-  /** X coordinate (pixels). */
-  x: number
-  /** Y coordinate (pixels). */
-  y: number
-  /** Current radius. */
-  radius: number
-  /** Optional starting colour – if omitted a random colour is chosen. */
-  color?: string
-
+  /** Display name chosen by the player. */
   name?: string
+  /** X coordinate in world pixels. */
+  x: number
+  /** Y coordinate in world pixels. */
+  y: number
+  /** Starting radius. */
+  radius: number
+  /** Optional colour override – if omitted a colour is picked from the palette. */
+  color?: string
 }
 
 /**
- * Player entity that lives inside a `GameRoom`.
+ * Mutable player entity that lives inside a `GameRoom`.
  *
- * • Holds the socket reference for quick emit.
- * • Exposes a tiny API (`setVelocity`, `getState`) so the room can keep
- *   the physics engine ignorant of networking details.
+ * All physics-relevant fields are public so `Physics` and `GameRoom` can
+ * manipulate them directly without extra getter/setter boilerplate.
  */
 export class Player {
-  /** Socket.io id (also used as player id). */
+  // ── Identity ────────────────────────────────────────────────────────────
   readonly id: string
-
   readonly name: string
+  readonly color: string
 
-  /* ---------- Position & Size ---------- */
+  // ── Position & size ──────────────────────────────────────────────────────
   x: number
   y: number
+  /** Radius doubles as the "size" value sent to the client. */
   radius: number
 
-  /* ---------- Movement ---------- */
-  /** Velocity in pixels per tick. Filled by `setVelocity`. */
+  // ── Velocity (pixels per tick) ───────────────────────────────────────────
   velocityX = 0
   velocityY = 0
 
-  /* ---------- Appearance ---------- */
-  readonly color: string
+  // ── Game stats ───────────────────────────────────────────────────────────
+  score = 0
+  lastSplitTime = 0
+  lastSpitTime = 0
 
-  /** ------------------------------------------------------------ */
+  // ── Internal state ───────────────────────────────────────────────────────
+  /** Index into the palette used for this player – lets pieces inherit colour. */
+  private static nextColorIndex = 0
+
   constructor(opts: PlayerOptions) {
     this.id = opts.id
-    this.name = opts.name || ''
-
-    // Position & size
+    this.name = opts.name ?? ''
     this.x = opts.x
     this.y = opts.y
     this.radius = opts.radius
-
-    // Color – default to a random RGB if none supplied
-    this.color = opts.color ?? Player.randomColor()
+    this.color = opts.color ?? Player.pickColor()
   }
 
-  /* ------------------------------------------------------------ */
-  /** Set the velocity (called by the room when a `move` event arrives). */
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  /** Convenience setter used by the socket handler. */
   setVelocity(dx: number, dy: number) {
     this.velocityX = dx
     this.velocityY = dy
   }
 
-  /* ------------------------------------------------------------ */
-  /** Return a plain object that the client can consume. */
+  /**
+   * Return a plain object in the canonical wire format (`PlayerState`).
+   * This is what `GameRoom.getGameState()` embeds in each tick broadcast.
+   */
   getState(): PlayerState {
     return {
       id: this.id,
-      x: this.x,
-      y: this.y,
-      radius: this.radius,
+      name: this.name,
+      position: { x: this.x, y: this.y },
+      velocity: { x: this.velocityX, y: this.velocityY },
+      size: this.radius,
       color: this.color,
+      isAlive: true,
+      score: this.score,
+      lastSplitTime: this.lastSplitTime,
+      lastSpitTime: this.lastSpitTime,
     }
   }
 
-  /* ------------------------------------------------------------ */
-  /** Utility – generate a random RGB string. */
-  private static randomColor(): string {
-    const r = Math.floor(Math.random() * 256)
-    const g = Math.floor(Math.random() * 256)
-    const b = Math.floor(Math.random() * 256)
-    return `rgb(${r},${g},${b})`
+  // ── Private utilities ────────────────────────────────────────────────────
+
+  /** Round-robin through the palette so successive players get distinct colours. */
+  private static pickColor(): string {
+    const color = PLAYER_COLORS[Player.nextColorIndex % PLAYER_COLORS.length]
+    Player.nextColorIndex++
+    return color
   }
 }

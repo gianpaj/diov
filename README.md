@@ -25,6 +25,7 @@
   │  Docker/K8s (optional) │
   └─────────────────────┘
 ```
+
 A real-time multiplayer browser game where players control circles, eat smaller opponents, and compete to be the last one standing. Built as a mobile-first web app with landscape orientation.
 
 ![Status](https://img.shields.io/badge/Status-In%20Development-orange)

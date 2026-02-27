@@ -27,40 +27,39 @@ Prioritised task list. Items marked 🔴 are **blocking** (the game cannot be pl
 
 ### Backend: `join_game` Handler Broken for Non-Host Players
 
-- [ ] Fix `backend/src/networking/socket.ts` — the current handler returns an error and exits for every player who is not the host, so only the host ever receives `game_state` or gets added to the room properly
-- [ ] Separate concerns: all joining players should receive initial state; only the host should be allowed to trigger `start_game`
-- [ ] Emit `game_state` (initial state) to every player on join, not just the host
-- [ ] Emit `player_joined` broadcast to all existing players in the room when a new player joins
+- [x] Fix `backend/src/networking/socket.ts` — the current handler returns an error and exits for every player who is not the host, so only the host ever receives `game_state` or gets added to the room properly
+- [x] Separate concerns: all joining players should receive initial state; only the host should be allowed to trigger `start_game`
+- [x] Emit `game_state` (initial state) to every player on join, not just the host
+- [x] Emit `player_joined` broadcast to all existing players in the room when a new player joins
 
 ### Backend: `join_game` Payload Missing `roomId`
 
-- [ ] Frontend (`SocketStore.tsx`) emits `socket.emit('join_game', { playerName })` with no `roomId`
-- [ ] Backend destructures `payload.roomId` which will be `undefined`, causing all players to share a single accidental room keyed `"undefined"`
-- [ ] Decision needed: either send a hardcoded default room ID from the frontend (`"global"` for MVP), or have the backend assign the room and return the `roomId` to the client
-- [ ] For MVP: default to a single global room; add matchmaking later
+- [x] Frontend (`SocketStore.tsx`) emits `socket.emit('join_game', { playerName })` with no `roomId`
+- [x] Backend destructures `payload.roomId` which will be `undefined`, causing all players to share a single accidental room keyed `"undefined"`
+- [x] Decision needed: either send a hardcoded default room ID from the frontend (`"global"` for MVP), or have the backend assign the room and return the `roomId` to the client
+- [x] For MVP: default to a single global room; add matchmaking later
 
 ### Frontend ↔ Backend: Socket Event Name Mismatch
 
-- [ ] Frontend (`SocketStore.tsx`) emits `'player_input'` with payload `{ movement: { x, y }, splitPressed, spitPressed }`
-- [ ] Backend (`socket.ts`) listens for `'move'` with payload `{ dx, dy }` — the input is silently dropped; players cannot move
-- [ ] Align event names using the constants in `backend/src/game/events.ts`; add `PLAYER_INPUT`, `START_GAME`, `LEAVE_GAME` constants as needed
-- [ ] Reconcile payload shapes: backend validator (`validators.ts`) expects `{ dx, dy }` — update to accept `{ movement: { x, y }, splitPressed, spitPressed }` or map at the boundary
-- [ ] Frontend `startGame()` emits `'start_game'`; backend has no handler for it — add one in `socket.ts`
-- [ ] Frontend `leaveGame()` emits `'leave_game'`; backend has no handler — add one
+- [x] Frontend (`SocketStore.tsx`) emits `'player_input'` with payload `{ movement: { x, y }, splitPressed, spitPressed }`
+- [x] Backend (`socket.ts`) listens for `'move'` with payload `{ dx, dy }` — the input is silently dropped; players cannot move
+- [x] Align event names using the constants in `backend/src/game/events.ts`; add `PLAYER_INPUT`, `START_GAME`, `LEAVE_GAME` constants as needed
+- [x] Reconcile payload shapes: backend validator (`validators.ts`) expects `{ dx, dy }` — update to accept `{ movement: { x, y }, splitPressed, spitPressed }` or map at the boundary
+- [x] Frontend `startGame()` emits `'start_game'`; backend has no handler for it — add one in `socket.ts`
+- [x] Frontend `leaveGame()` emits `'leave_game'`; backend has no handler — add one
 
 ### Frontend ↔ Backend: `GameState` Shape Mismatch
 
-- [ ] Frontend types (`src/types/game.ts`): players stored as `Record<string, Player>`, positions as `{ position: Vector2D }`, size as `size: number`, liveness as `isAlive: boolean`
-- [ ] Backend types (`backend/src/types/index.ts`): players as `PlayerState[]` array, positions as flat `x: number, y: number`, size as `radius: number`, no `isAlive` field
-- [ ] Every `game_state` broadcast will fail to render in the frontend
-- [ ] Recommended fix: update `room.getGameState()` to emit a shape matching the frontend `GameState` type (use `position`, `size`, `isAlive`, keyed record)
-- [ ] Alternatively, add a mapping/transform layer in the frontend `SocketStore` `onGameStateUpdate` handler
-- [ ] Either way: document the canonical wire format and keep both sides in sync
+- [x] Frontend types (`src/types/game.ts`): players stored as `Record<string, Player>`, positions as `{ position: Vector2D }`, size as `size: number`, liveness as `isAlive: boolean`
+- [x] Backend types (`backend/src/types/index.ts`): players as `PlayerState[]` array, positions as flat `x: number, y: number`, size as `radius: number`, no `isAlive` field
+- [x] Every `game_state` broadcast will fail to render in the frontend
+- [x] Recommended fix: update `room.getGameState()` to emit a shape matching the frontend `GameState` type (use `position`, `size`, `isAlive`, keyed record)
+- [x] Either way: document the canonical wire format and keep both sides in sync
 
 ### Backend: `getGameState()` Missing `status` Field (TypeScript Error)
 
-- [ ] `room.ts` line 203: `getGameState()` returns an object missing the `status` field required by the `GameState` type
-- [ ] Add `status: this.status` to the returned object
+- [x] `room.ts` line 203: `getGameState()` returns an object missing the `status` field required by the `GameState` type
+- [x] Add `status: this.status` to the returned object
 
 ### Frontend: `styled-jsx` Not Installed — TypeScript Errors in Every Component
 
@@ -71,25 +70,21 @@ Prioritised task list. Items marked 🔴 are **blocking** (the game cannot be pl
 - [ ] Alternative: `pnpm add styled-jsx babel-plugin-styled-jsx` and configure the Vite/Babel plugin
 
 ### Frontend: Missing `vite-env.d.ts` — `import.meta.env` Type Error
-- [ ] `SocketStore.tsx` uses `import.meta.env.VITE_SERVER_URL` but there is no `src/vite-env.d.ts`
-- [ ] TypeScript reports: `Property 'env' does not exist on type 'ImportMeta'`
-- [ ] Fix: create `src/vite-env.d.ts` with:
-  ```ts
-  /// <reference types="vite/client" />
-  interface ImportMetaEnv {
-    readonly VITE_SERVER_URL: string
-  }
-  ```
+
+- [x] `SocketStore.tsx` uses `import.meta.env.VITE_SERVER_URL` but there is no `src/vite-env.d.ts`
+- [x] TypeScript reports: `Property 'env' does not exist on type 'ImportMeta'`
+- [x] Fix: create `src/vite-env.d.ts` with `/// <reference types="vite/client" />` and typed `ImportMetaEnv`
 
 ---
 
 ## 🟡 Important — Needed for a Working Game
 
-### Backend: `GameRoom.fromPlain()` / `toPlain()` Not Implemented
-- [ ] `autoSave.ts` calls `GameRoom.fromPlain(room)` and `room.toPlain()` — both are stubs
-- [ ] `toPlain()` is declared but returns `undefined`; `fromPlain` is a static method that doesn't exist
-- [ ] TypeScript error on `autoSave.ts` line 18
-- [ ] Either implement both methods to enable JSON persistence, or remove `autoSave.ts` until persistence is a priority
+### Backend: `GameRoom.fromPlain()` / `toPlain()` Not Fully Implemented
+
+- [x] `toPlain()` was a stub returning `undefined` — now returns a plain object snapshot
+- [x] `fromPlain` static method did not exist — now exists and throws a clear `not yet implemented` error to satisfy the TypeScript compiler
+- [ ] Fully re-hydrate `fromPlain()` to restore a `GameRoom` from a plain object (needed for crash recovery / persistence)
+- [ ] TypeScript error on `autoSave.ts` line 18 is resolved; runtime re-hydration still pending
 
 ### Backend: `@prisma/client` Not Installed
 - [ ] `backend/src/persistence/db.ts` imports `PrismaClient` from `@prisma/client` — package not installed, no Prisma schema exists
@@ -97,9 +92,8 @@ Prioritised task list. Items marked 🔴 are **blocking** (the game cannot be pl
 - [ ] For now: remove or stub out `db.ts`; add Prisma properly when PostgreSQL integration begins (`prisma init`, define schema, run migrations)
 
 ### Backend: `socket.data` Type Error (Ping Interval Storage)
-- [ ] `SocketStore.tsx` line 362 sets `socket.data = { pingInterval }` to store the ping timer
-- [ ] Socket.io client `Socket` type does not have a `data` property
-- [ ] Fix: store the interval ID in a `useRef` inside `useAutoConnect`, or add a `pingIntervalId` field to the store state
+- [x] `SocketStore.tsx` was storing ping interval on `socket.data` which is not a valid Socket.io client property
+- [x] Fixed by adding `pingIntervalId` field to the Zustand store state; `startPingMonitoring` / `stopPingMonitoring` now manage it there
 
 ### Backend: `@upstash/redis` Not in `package.json`
 - [ ] `backend/src/persistence/redis.ts` imports from `@upstash/redis` — not listed as a dependency
@@ -134,6 +128,20 @@ Prioritised task list. Items marked 🔴 are **blocking** (the game cannot be pl
 - [ ] `App.tsx` shows a rotation warning whenever `window.innerWidth <= window.innerHeight`
 - [ ] This blocks use on portrait desktop monitors and makes dev harder
 - [ ] Fix: allow override in `NODE_ENV=development` or add a `?landscape=bypass` query param during testing
+
+### Backend & Frontend: Player Presence Tracking
+
+The game has no real presence system. The mechanical pieces (Maps, join/leave broadcasts) exist but several critical behaviours are missing.
+
+- [ ] Add a `connected: boolean` (or `status: 'online' | 'disconnected'`) field to `Player` / `PlayerState` so the backend can distinguish a dropped socket from an eliminated player
+- [ ] Implement a **reconnection grace window** (e.g. 10 s): on `disconnect`, mark the player as `connected: false` but do NOT delete them immediately; cancel deletion if the same session reconnects within the window
+  - Requires a session token (e.g. a short-lived UUID returned on `join_game` and re-sent on reconnect) because the socket ID changes on reconnect
+- [ ] Implement **host re-assignment**: if the host disconnects (or leaves), promote the next connected player to host and emit a `host_changed` event so the frontend can show the Start button to the new host
+  - Currently `hostId` is set once and never updated — the room becomes permanently un-startable when the host leaves
+- [ ] Make `WaitingRoom.tsx` react to `player_joined` / `player_left` events **directly** (update the player list immediately) rather than waiting for the next `game_state` tick
+  - Both callbacks currently only `console.log`; during the `WAITING` phase the game loop does not tick, so the list may never refresh
+- [ ] Emit a richer `player_left` payload that includes a `reason` field (`'disconnected' | 'left' | 'eliminated'`) so the frontend and other players can display the correct message
+- [ ] Add idle / AFK detection: if a player sends no input for N seconds during `PLAYING`, mark them as AFK; optionally auto-remove after a longer timeout rather than relying on Socket.io's 20 s heartbeat
 
 ### Backend: `checkGameOver()` Is a Stub
 - [ ] `room.ts` `checkGameOver()` detects 1 or 0 players remaining but does nothing — no winner broadcast, no room cleanup, no `game_ended` event

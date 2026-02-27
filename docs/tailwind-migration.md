@@ -413,32 +413,31 @@ These cannot be expressed as inline Tailwind utilities and must live in CSS:
 - [x] `@theme {}` token block added to `src/index.css`
 
 ### Global cleanup (do after all components are migrated)
-- [ ] Convert `.btn` / `.btn-primary` / `.btn-secondary` to `@layer components` in `index.css`
-- [ ] Replace `.loading` with `animate-spin` Tailwind classes in-place
-- [ ] Delete `.text-center`, `.mb-4`, `.mt-4`, `.flex`, `.flex-col`, `.items-center`,
+- [x] Convert `.btn` / `.btn-primary` / `.btn-secondary` to `@layer components` in `index.css`
+- [x] Replace `.loading` with `animate-spin` Tailwind classes in-place
+- [x] Delete `.text-center`, `.mb-4`, `.mt-4`, `.flex`, `.flex-col`, `.items-center`,
       `.justify-center`, `.gap-4`, `.w-full`, `.h-full` from `index.css`
-      (these are already Tailwind utilities: `text-center`, `mb-4`, etc.)
-- [ ] Delete `.ui-overlay`, `.menu`, `.control-button`, `.control-buttons`,
+- [x] Delete `.ui-overlay`, `.menu`, `.control-button`, `.control-buttons`,
       `.portrait-warning`, `.game-canvas` once no component references them
 
 ### Components
-- [ ] `ActionButtons.tsx` — replace `<style>` block, apply utilities
-- [ ] `VirtualJoystick.tsx` — replace `<style>` block, keep `.pulsing` keyframe
-- [ ] `GameOverScreen.tsx` — replace `<style>` block, apply utilities
-- [ ] `HomePage.tsx` — replace `<style>` block, keep gradient-text rule
-- [ ] `WaitingRoom.tsx` — replace `<style>` block, apply utilities
-- [ ] `GameHUD.tsx` — replace `<style>` block, keep `::before` dot rule
-- [ ] `GamePage.tsx` — replace `<style>` block, apply utilities
+- [x] `ActionButtons.tsx` — replace `<style>` block, apply utilities
+- [x] `VirtualJoystick.tsx` — replace `<style>` block, keep `.pulsing` keyframe
+- [x] `GameOverScreen.tsx` — replace `<style>` block, apply utilities
+- [x] `HomePage.tsx` — replace `<style>` block, keep gradient-text rule
+- [x] `WaitingRoom.tsx` — replace `<style>` block, apply utilities
+- [x] `GameHUD.tsx` — replace `<style>` block, keep `::before` dot rule
+- [x] `GamePage.tsx` — replace `<style>` block, apply utilities
 
 ### Add `cn()` helper
-- [ ] Create `src/utils/cn.ts`
+- [x] Create `src/utils/cn.ts`
 
 ### Final validation
-- [ ] `pnpm type-check:all` passes
-- [ ] `pnpm build` produces no CSS warnings
+- [x] `pnpm type-check` passes
+- [x] `pnpm build` produces no CSS warnings
 - [ ] All seven components render correctly in the browser at 1080p landscape
 - [ ] All seven components render correctly on a 375 × 667 mobile viewport (rotated to landscape)
-- [ ] No `<style>` tags remain except the two documented exceptions
-      (`GameHUD.tsx` dot indicator, `HomePage.tsx` gradient text)
-- [ ] `src/index.css` contains only: `@import`, `@theme`, global reset, `@layer components`
+- [x] No `<style>` tags remain except documented exceptions:
+      `GameHUD.tsx` (dot `::before`), `HomePage.tsx` (gradient text), `VirtualJoystick.tsx` (keyframe + `::after`)
+- [x] `src/index.css` contains only: `@import`, `@theme`, global reset, `@layer components`
       (`.btn` etc.), and the two animation `@keyframes`

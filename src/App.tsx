@@ -2,6 +2,7 @@ import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import GamePage from '@/components/GamePage'
 import HomePage from '@/components/HomePage'
 import WaitingRoom from '@/components/WaitingRoom'
+import RequireSession from '@/components/RequireSession'
 import { useOrientation } from '@/hooks/useOrientation'
 import { GameProvider } from '@/stores/GameStore'
 import { SocketProvider } from '@/stores/SocketStore'
@@ -17,9 +18,9 @@ function App() {
 
   if (!isLandscape && !isOrientationBypassed) {
     return (
-      <div className='portrait-warning'>
-        <div style={{ fontSize: '48px', marginBottom: '20px' }}>📱➡️📱</div>
-        <div style={{ fontSize: '24px', marginBottom: '10px' }}>Please rotate your device</div>
+      <div className='w-screen h-screen flex flex-col items-center justify-center bg-[#0f0f23] text-white text-center p-5'>
+        <div className='text-5xl mb-5'>📱➡️📱</div>
+        <div className='text-2xl mb-2.5'>Please rotate your device</div>
         <div>Battle Circles requires landscape mode for the best experience</div>
       </div>
     )
@@ -32,8 +33,22 @@ function App() {
           <div className='App'>
             <Routes>
               <Route path='/' element={<HomePage />} />
-              <Route path='/waiting' element={<WaitingRoom />} />
-              <Route path='/game' element={<GamePage />} />
+              <Route
+                path='/waiting'
+                element={
+                  <RequireSession>
+                    <WaitingRoom />
+                  </RequireSession>
+                }
+              />
+              <Route
+                path='/game'
+                element={
+                  <RequireSession>
+                    <GamePage />
+                  </RequireSession>
+                }
+              />
             </Routes>
           </div>
         </Router>

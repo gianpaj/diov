@@ -324,17 +324,17 @@ const GamePage: React.FC = () => {
 
   if (!gameState || !localPlayer) {
     return (
-      <div className='game-loading'>
-        <div className='loading-content'>
-          <div className='loading' />
-          <p>Loading game...</p>
+      <div className='w-screen h-screen flex items-center justify-center bg-[#0F0F23] text-white'>
+        <div className='text-center flex flex-col items-center gap-5'>
+          <div className='inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin' />
+          <p className='text-[18px] text-white/80'>Loading game...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className='game-page'>
+    <div className='relative w-screen h-screen overflow-hidden bg-[#0F0F23]'>
       {/* PIXI.js Stage */}
       <Stage
         width={dimensions.width}
@@ -367,7 +367,7 @@ const GamePage: React.FC = () => {
       </Stage>
 
       {/* UI Overlay */}
-      <div className='ui-overlay'>
+      <div className='absolute inset-0 pointer-events-none z-[10] [&>*]:pointer-events-auto'>
         {/* HUD */}
         <GameHUD />
 
@@ -388,11 +388,10 @@ const GamePage: React.FC = () => {
         />
 
         {/* Pause/Menu Button */}
-        <div className='top-controls'>
+        <div className='absolute top-5 left-5 z-[20]'>
           <button
-            className='control-button'
+            className='w-[70px] h-[70px] rounded-full border-[3px] border-white/30 bg-black/40 backdrop-blur-[10px] flex items-center justify-center cursor-pointer transition-all duration-200 text-white hover:bg-white/10 hover:border-white/50 hover:scale-105 active:scale-95 active:bg-white/20'
             onClick={handlePause}
-            style={{ top: '20px', left: '20px' }}
           >
             {isPaused ? <Play size={20} /> : <Pause size={20} />}
           </button>
@@ -400,10 +399,10 @@ const GamePage: React.FC = () => {
 
         {/* Pause Menu */}
         {isPaused && (
-          <div className='pause-menu'>
-            <div className='pause-content'>
-              <h2>Game Paused</h2>
-              <div className='pause-buttons'>
+          <div className='absolute inset-0 flex items-center justify-center bg-black/80 z-[100] backdrop-blur-[10px]'>
+            <div className='bg-black/90 rounded-[--radius-card] p-10 text-center border border-white/10'>
+              <h2 className='text-white mb-[30px] text-[2em]'>Game Paused</h2>
+              <div className='flex flex-col gap-[15px] min-w-[200px]'>
                 <button className='btn btn-primary' onClick={handlePause}>
                   <Play size={16} />
                   Resume
@@ -422,41 +421,6 @@ const GamePage: React.FC = () => {
           <GameOverScreen onRestart={() => navigate('/')} />
         )}
       </div>
-
-      <style>{`
-        .game-page {
-          width: 100vw;
-          height: 100vh;
-          position: relative;
-          overflow: hidden;
-          background: #0F0F23;
-        }
-
-        .game-loading {
-          width: 100vw;
-          height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #0F0F23;
-          color: white;
-        }
-
-        .loading-content {
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 20px;
-        }
-
-        .loading-content p {
-          font-size: 18px;
-          color: rgba(255, 255, 255, 0.8);
-        }
-
-
-      `}</style>
     </div>
   )
 }

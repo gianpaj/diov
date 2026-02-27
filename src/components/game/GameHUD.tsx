@@ -1,5 +1,6 @@
 import React from 'react'
 import { Users, Clock, Target, Zap } from 'lucide-react'
+import { cn } from '@/utils/cn'
 import { useGameStore } from '@/stores/GameStore'
 import { useSocketStore } from '@/stores/SocketStore'
 import { GameStatus } from '@/types'

@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, Clock, Play, ArrowLeft, Wifi, WifiOff } from 'lucide-react'
-import { cn } from '@/utils/cn'
 import { useSocketStore } from '@/stores/SocketStore'
 import { useGameStore } from '@/stores/GameStore'
 import { GameStatus, type PlayerState } from '@/types'

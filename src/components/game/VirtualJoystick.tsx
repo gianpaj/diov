@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react'
+import { cn } from '@/utils/cn'
 import { Vector2D } from '@/types'
 
 interface VirtualJoystickProps {
@@ -19,19 +20,29 @@ const VirtualJoystick = forwardRef<HTMLDivElement, VirtualJoystickProps>(
     }
 
     return (
-      <div className='joystick-container' ref={ref}>
+      <div className='absolute left-5 bottom-5 w-[120px] h-[120px] z-[15] pointer-events-auto' ref={ref}>
         <div
-          className='joystick-area'
+          className='relative w-full h-full flex items-center justify-center touch-none select-none'
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           onMouseDown={onMouseDown}
         >
           {/* Glow ring — opacity driven by isActive via inline style */}
-          <div className='joystick-glow' style={{ opacity: isActive ? 1 : 0 }} />
-          <div className='joystick-base'>
+          <div
+            className='absolute top-[-5px] left-[-5px] right-[-5px] bottom-[-5px] rounded-full z-[-1] pointer-events-none transition-opacity duration-200 bg-[linear-gradient(45deg,transparent,rgba(102,126,234,0.3),transparent)]'
+            style={{ opacity: isActive ? 1 : 0 }}
+          />
+          <div className='relative w-[100px] h-[100px] rounded-full bg-black/40 border-[3px] border-white/30 backdrop-blur-[10px] flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.3)] active:scale-[0.98]'>
             <div
-              className={`joystick-knob ${isActive ? 'active' : ''} ${magnitude > 0.8 ? 'pulsing' : ''}`}
+              className={cn(
+                'joystick-knob absolute w-[45px] h-[45px] rounded-full border-2',
+                'shadow-[0_2px_10px_rgba(0,0,0,0.4)]',
+                isActive
+                  ? 'bg-white border-[rgba(102,126,234,0.8)] shadow-[0_2px_15px_rgba(0,0,0,0.5)]'
+                  : 'bg-white/90 border-white/50',
+                magnitude > 0.8 && 'pulsing',
+              )}
               style={{
                 transform: `translate(${knobOffset.x}px, ${knobOffset.y}px)`,
                 transition: isActive ? 'none' : 'transform 0.2s ease-out',
@@ -41,80 +52,14 @@ const VirtualJoystick = forwardRef<HTMLDivElement, VirtualJoystickProps>(
         </div>
 
         <style>{`
-          .joystick-container {
-            position: absolute;
-            left: 20px;
-            bottom: 20px;
-            width: 120px;
-            height: 120px;
-            z-index: 15;
-            pointer-events: auto;
+          .pulsing {
+            animation: joystick-pulse 0.5s ease-in-out infinite alternate;
           }
-
-          .joystick-area {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            touch-action: none;
-            user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent;
-            position: relative;
+          @keyframes joystick-pulse {
+            from { scale: 1; }
+            to   { scale: 1.1; }
           }
-
-          /* Glow ring rendered as a sibling div so opacity can be set via inline style */
-          .joystick-glow {
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            right: -5px;
-            bottom: -5px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.3), transparent);
-            transition: opacity 0.2s ease;
-            z-index: -1;
-            pointer-events: none;
-          }
-
-          .joystick-base {
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.4);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            backdrop-filter: blur(10px);
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-          }
-
-          .joystick-base:active {
-            transform: scale(0.98);
-          }
-
-          .joystick-knob {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.9);
-            position: absolute;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
-            border: 2px solid rgba(255, 255, 255, 0.5);
-          }
-
-          .joystick-knob.active {
-            background: rgba(255, 255, 255, 1);
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
-            border-color: rgba(102, 126, 234, 0.8);
-          }
-
+          /* Inner dot pseudo-element */
           .joystick-knob::after {
             content: '';
             position: absolute;
@@ -126,43 +71,8 @@ const VirtualJoystick = forwardRef<HTMLDivElement, VirtualJoystickProps>(
             border-radius: 50%;
             background: rgba(0, 0, 0, 0.1);
           }
-
           .joystick-knob.active::after {
             background: rgba(102, 126, 234, 0.3);
-          }
-
-          /* Pulse animation when magnitude > 0.8 — toggled via .pulsing class */
-          .joystick-knob.pulsing {
-            animation: joystick-pulse 0.5s ease-in-out infinite alternate;
-          }
-
-          @keyframes joystick-pulse {
-            from { scale: 1; }
-            to   { scale: 1.1; }
-          }
-
-          @media (max-width: 768px) {
-            .joystick-container {
-              width: 100px;
-              height: 100px;
-              left: 15px;
-              bottom: 15px;
-            }
-
-            .joystick-base {
-              width: 80px;
-              height: 80px;
-            }
-
-            .joystick-knob {
-              width: 35px;
-              height: 35px;
-            }
-
-            .joystick-knob::after {
-              width: 15px;
-              height: 15px;
-            }
           }
         `}</style>
       </div>

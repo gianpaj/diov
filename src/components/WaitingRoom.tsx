@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, Clock, Play, ArrowLeft, Wifi, WifiOff } from 'lucide-react'
+import { cn } from '@/utils/cn'
 import { useSocketStore } from '@/stores/SocketStore'
 import { useGameStore } from '@/stores/GameStore'
 import { GameStatus, type PlayerState } from '@/types'
@@ -148,6 +149,7 @@ const WaitingRoom: React.FC = () => {
         return '#DDA0DD'
     }
   }
+
   const handleStartGame = () => {
     // emit the custom event to the server
     startGame()
@@ -156,21 +158,24 @@ const WaitingRoom: React.FC = () => {
 
   if (countdown !== null) {
     return (
-      <div className='waiting-room countdown-screen'>
-        <div className='countdown-container'>
-          <h1>Game Starting!</h1>
-          <div className='countdown-number pulse'>{countdown}</div>
-          <p>Get ready to battle!</p>
+      <div className='w-screen h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#16213e_35%,#0f0f23_100%)]'>
+        <div className='text-center bg-black/80 rounded-[--radius-card] px-[60px] py-[60px] backdrop-blur-[20px] border border-white/10'>
+          <h1 className='text-[2.5em] mb-[30px] text-white'>Game Starting!</h1>
+          <div className='text-[8em] font-bold text-[--color-accent-red] my-5 [text-shadow:0_0_30px_rgba(255,107,107,0.5)] animate-pulse'>
+            {countdown}
+          </div>
+          <p className='text-[1.3em] text-white/80 mt-5'>Get ready to battle!</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className='waiting-room'>
-      <div className='waiting-room-container fade-in'>
-        <div className='room-header'>
-          <div className='header-left'>
+    <div className='w-screen h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#16213e_35%,#0f0f23_100%)]'>
+      <div className='animate-[fadeIn_0.5s_ease-out] bg-black/80 rounded-[--radius-card] p-[30px] backdrop-blur-[20px] border border-white/10 min-w-[600px] max-w-[800px] max-h-[90vh] overflow-y-auto'>
+        {/* Header */}
+        <div className='flex justify-between items-center mb-[30px] pb-5 border-b border-white/10'>
+          <div className='flex-1'>
             <button
               className='btn btn-secondary'
               type='button'
@@ -182,20 +187,14 @@ const WaitingRoom: React.FC = () => {
             </button>
           </div>
 
-          <div className='header-center'>
-            <h2>Waiting Room</h2>
+          <div className='flex-none'>
+            <h2 className='text-white m-0 text-[1.8em]'>Waiting Room</h2>
           </div>
 
-          <div className='header-right'>
+          <div className='flex-1 flex justify-end'>
             <div
-              className='connection-indicator'
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                color: getConnectionColor(),
-                fontSize: '14px',
-              }}
+              className='flex items-center gap-1.5 text-sm'
+              style={{ color: getConnectionColor() }}
             >
               {getConnectionIcon()}
               <span>{connectionStatus}</span>
@@ -203,30 +202,30 @@ const WaitingRoom: React.FC = () => {
           </div>
         </div>
 
-        <div className='room-content'>
-          <div className='game-status'>
-            <div className='status-card'>
-              <div className='status-icon'>
+        <div className='flex flex-col gap-[30px]'>
+          {/* Game status */}
+          <div className='text-center'>
+            <div className='flex items-center justify-center gap-5 bg-white/5 rounded-[15px] p-5 border border-white/10 mb-5'>
+              <div className='text-[--color-accent-teal]'>
                 <Users size={32} />
               </div>
-              <div className='status-info'>
-                <h3>
+              <div>
+                <h3 className='m-0 mb-1 text-white text-[1.5em]'>
                   {playerCount} / {maxPlayers} Players
                 </h3>
-                <p>{getPlayerStatusText()}</p>
+                <p className='m-0 text-white/70 text-[1.1em]'>{getPlayerStatusText()}</p>
               </div>
             </div>
 
-            <div className='progress-container'>
-              <div className='progress-bar'>
+            <div className='flex flex-col gap-2.5'>
+              {/* Progress bar */}
+              <div className='w-full h-2 bg-white/10 rounded overflow-hidden my-2.5'>
                 <div
-                  className='progress-fill'
-                  style={{
-                    width: `${Math.max((playerCount / minPlayers) * 100, 0)}%`,
-                  }}
+                  className='h-full bg-gradient-to-r from-[--color-accent-red] to-[--color-accent-teal] rounded transition-[width] duration-300'
+                  style={{ width: `${Math.max((playerCount / minPlayers) * 100, 0)}%` }}
                 />
               </div>
-              <div className='progress-text'>
+              <div className='text-white/80 text-[0.9em] text-center'>
                 {canStartGame ? 'Ready!' : `${minPlayers - playerCount} more needed`}
               </div>
               {canStartGame && isHost && (
@@ -242,369 +241,79 @@ const WaitingRoom: React.FC = () => {
             </div>
           </div>
 
-          <div className='players-section'>
-            <h3>
+          {/* Player list */}
+          <div>
+            <h3 className='flex items-center gap-2.5 text-white mb-5 text-[1.3em]'>
               <Users size={20} />
               Players ({playerCount})
             </h3>
 
-            <div className='player-list'>
+            <div className='flex flex-col gap-2.5 max-h-[300px] overflow-y-auto pr-2.5'>
               {players.map((player, index) => (
-                <div key={player.id} className='player-item'>
-                  <div className='player-avatar'>
-                    <div className='avatar-circle' style={{ backgroundColor: player.color }}>
+                <div
+                  key={player.id}
+                  className='flex items-center gap-[15px] p-3 bg-white/5 rounded-[10px] border border-white/10 transition-all duration-200 hover:bg-white/10'
+                >
+                  <div className='shrink-0'>
+                    <div
+                      className='w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-base'
+                      style={{ backgroundColor: player.color }}
+                    >
                       {player.name?.charAt(0).toUpperCase()}
                     </div>
                   </div>
-                  <div className='player-info'>
-                    <div className='player-name'>
+                  <div className='flex-1 flex flex-col gap-0.5'>
+                    <div className='text-white font-semibold flex items-center gap-2'>
                       {player.name}
                       {player.name === uiState.playerName && (
-                        <span className='you-indicator'>(You)</span>
+                        <span className='text-[--color-accent-teal] text-[0.8em] font-normal'>(You)</span>
                       )}
                     </div>
-                    <div className='player-status'>Ready</div>
+                    <div className='text-white/60 text-[0.85em]'>Ready</div>
                   </div>
-                  <div className='player-rank'>#{index + 1}</div>
+                  <div className='text-white/50 text-[0.9em] font-semibold'>#{index + 1}</div>
                 </div>
               ))}
 
               {/* Empty slots */}
               {Array.from({ length: maxPlayers - playerCount }).map((_, index) => (
-                <div key={`empty-${index + 1}`} className='player-item empty-slot'>
-                  <div className='player-avatar'>
-                    <div className='avatar-circle empty'>
+                <div
+                  key={`empty-${index + 1}`}
+                  className='flex items-center gap-[15px] p-3 bg-white/5 rounded-[10px] border border-white/10 transition-all duration-200 opacity-50'
+                >
+                  <div className='shrink-0'>
+                    <div className='w-10 h-10 rounded-full flex items-center justify-center bg-white/10 text-white/50'>
                       <Users size={16} />
                     </div>
                   </div>
-                  <div className='player-info'>
-                    <div className='player-name'>Waiting for player...</div>
-                    <div className='player-status'>Empty</div>
+                  <div className='flex-1 flex flex-col gap-0.5'>
+                    <div className='text-white font-semibold'>Waiting for player...</div>
+                    <div className='text-white/60 text-[0.85em]'>Empty</div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className='room-info'>
-            <div className='info-cards'>
-              <div className='info-card'>
-                <Clock size={20} />
-                <div>
-                  <h4>Game Duration</h4>
-                  <p>5 minutes</p>
-                </div>
+          {/* Room info */}
+          <div className='grid grid-cols-2 gap-[15px]'>
+            <div className='flex items-center gap-3 p-[15px] bg-white/5 rounded-[10px] border border-white/10'>
+              <Clock size={20} />
+              <div>
+                <h4 className='m-0 mb-0.5 text-white text-[0.95em]'>Game Duration</h4>
+                <p className='m-0 text-white/70 text-[0.85em]'>5 minutes</p>
               </div>
-              <div className='info-card'>
-                <Play size={20} />
-                <div>
-                  <h4>Auto Start</h4>
-                  <p>When {minPlayers}+ join</p>
-                </div>
+            </div>
+            <div className='flex items-center gap-3 p-[15px] bg-white/5 rounded-[10px] border border-white/10'>
+              <Play size={20} />
+              <div>
+                <h4 className='m-0 mb-0.5 text-white text-[0.95em]'>Auto Start</h4>
+                <p className='m-0 text-white/70 text-[0.85em]'>When {minPlayers}+ join</p>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        .waiting-room {
-          width: 100vw;
-          height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 35%, #0f0f23 100%);
-        }
-
-        .countdown-screen {
-          align-items: center;
-          justify-content: center;
-        }
-
-        .countdown-container {
-          text-align: center;
-          background: rgba(0, 0, 0, 0.8);
-          border-radius: 20px;
-          padding: 60px;
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .countdown-container h1 {
-          font-size: 2.5em;
-          margin-bottom: 30px;
-          color: #fff;
-        }
-
-        .countdown-number {
-          font-size: 8em;
-          font-weight: bold;
-          color: #ff6b6b;
-          margin: 20px 0;
-          text-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
-        }
-
-        .countdown-container p {
-          font-size: 1.3em;
-          color: rgba(255, 255, 255, 0.8);
-          margin-top: 20px;
-        }
-
-        .waiting-room-container {
-          background: rgba(0, 0, 0, 0.8);
-          border-radius: 20px;
-          padding: 30px;
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          min-width: 600px;
-          max-width: 800px;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-
-        .room-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 30px;
-          padding-bottom: 20px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .room-header h2 {
-          color: #fff;
-          margin: 0;
-          font-size: 1.8em;
-        }
-
-        .header-left,
-        .header-right {
-          flex: 1;
-        }
-
-        .header-right {
-          display: flex;
-          justify-content: flex-end;
-        }
-
-        .room-content {
-          display: flex;
-          flex-direction: column;
-          gap: 30px;
-        }
-
-        .game-status {
-          text-align: center;
-        }
-
-        .status-card {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 20px;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 15px;
-          padding: 20px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          margin-bottom: 20px;
-        }
-
-        .status-icon {
-          color: #4ecdc4;
-        }
-
-        .status-info h3 {
-          margin: 0 0 5px 0;
-          color: #fff;
-          font-size: 1.5em;
-        }
-
-        .status-info p {
-          margin: 0;
-          color: rgba(255, 255, 255, 0.7);
-          font-size: 1.1em;
-        }
-
-        .progress-container {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .progress-text {
-          color: rgba(255, 255, 255, 0.8);
-          font-size: 0.9em;
-          text-align: center;
-        }
-
-        .players-section h3 {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          color: #fff;
-          margin-bottom: 20px;
-          font-size: 1.3em;
-        }
-
-        .player-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          max-height: 300px;
-          overflow-y: auto;
-          padding-right: 10px;
-        }
-
-        .player-list::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .player-list::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 3px;
-        }
-
-        .player-list::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.3);
-          border-radius: 3px;
-        }
-
-        .player-item {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          padding: 12px;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          transition: all 0.2s ease;
-        }
-
-        .player-item:hover:not(.empty-slot) {
-          background: rgba(255, 255, 255, 0.1);
-        }
-
-        .empty-slot {
-          opacity: 0.5;
-        }
-
-        .player-avatar {
-          flex-shrink: 0;
-        }
-
-        .avatar-circle {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #fff;
-          font-weight: bold;
-          font-size: 16px;
-        }
-
-        .avatar-circle.empty {
-          background: rgba(255, 255, 255, 0.1);
-          color: rgba(255, 255, 255, 0.5);
-        }
-
-        .player-info {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .player-name {
-          color: #fff;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .you-indicator {
-          color: #4ecdc4;
-          font-size: 0.8em;
-          font-weight: normal;
-        }
-
-        .player-status {
-          color: rgba(255, 255, 255, 0.6);
-          font-size: 0.85em;
-        }
-
-        .player-rank {
-          color: rgba(255, 255, 255, 0.5);
-          font-size: 0.9em;
-          font-weight: 600;
-        }
-
-        .room-info {
-          margin-top: 10px;
-        }
-
-        .info-cards {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 15px;
-        }
-
-        .info-card {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 15px;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .info-card h4 {
-          margin: 0 0 2px 0;
-          color: #fff;
-          font-size: 0.95em;
-        }
-
-        .info-card p {
-          margin: 0;
-          color: rgba(255, 255, 255, 0.7);
-          font-size: 0.85em;
-        }
-
-        @media (max-width: 768px) {
-          .waiting-room-container {
-            min-width: 350px;
-            margin: 20px;
-            padding: 20px;
-          }
-
-          .room-header {
-            flex-direction: column;
-            gap: 15px;
-          }
-
-          .header-left,
-          .header-right {
-            flex: none;
-          }
-
-          .info-cards {
-            grid-template-columns: 1fr;
-          }
-
-          .countdown-container {
-            padding: 40px 30px;
-            margin: 20px;
-          }
-
-          .countdown-number {
-            font-size: 6em;
-          }
-        }
-      `}</style>
     </div>
   )
 }

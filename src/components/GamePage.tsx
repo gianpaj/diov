@@ -455,54 +455,7 @@ const GamePage: React.FC = () => {
           color: rgba(255, 255, 255, 0.8);
         }
 
-        .top-controls {
-          position: absolute;
-          top: 20px;
-          left: 20px;
-          z-index: 20;
-        }
 
-        .pause-menu {
-          position: absolute;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background: rgba(0, 0, 0, 0.8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 100;
-          backdrop-filter: blur(10px);
-        }
-
-        .pause-content {
-          background: rgba(0, 0, 0, 0.9);
-          border-radius: 20px;
-          padding: 40px;
-          text-align: center;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .pause-content h2 {
-          color: white;
-          margin-bottom: 30px;
-          font-size: 2em;
-        }
-
-        .pause-buttons {
-          display: flex;
-          flex-direction: column;
-          gap: 15px;
-          min-width: 200px;
-        }
-
-        @media (max-width: 768px) {
-          .pause-content {
-            margin: 20px;
-            padding: 30px 20px;
-          }
-        }
       `}</style>
     </div>
   )

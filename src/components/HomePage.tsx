@@ -153,53 +153,30 @@ const HomePage: React.FC = () => {
   }
 
   return (
-    <div className='home-page'>
-      <div className='menu fade-in'>
+    <div className='w-screen h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#16213e_35%,#0f0f23_100%)]'>
+      <div className='animate-[fadeIn_0.5s_ease-out] relative bg-black/80 rounded-[--radius-card] p-10 backdrop-blur-[20px] border border-white/10 min-w-[400px] text-center'>
         <div className='game-logo'>
           {joinError && (
             <div
-              className='join-error'
+              className='mb-4 px-4 py-2.5 rounded-xl bg-[rgba(255,107,107,0.15)] border border-[rgba(255,107,107,0.5)] text-[--color-accent-red] text-sm text-center'
               role='alert'
-              style={{
-                marginBottom: '16px',
-                padding: '10px 16px',
-                borderRadius: '12px',
-                background: 'rgba(255, 107, 107, 0.15)',
-                border: '1px solid rgba(255, 107, 107, 0.5)',
-                color: '#FF6B6B',
-                fontSize: '14px',
-                textAlign: 'center',
-              }}
             >
               {joinError}
             </div>
           )}
           <h1>Battle Circles</h1>
-          <p>Eat or be eaten in this multiplayer battle arena!</p>
+          <p className='text-[1.2em] text-white/80 text-center mb-[30px]'>
+            Eat or be eaten in this multiplayer battle arena!
+          </p>
         </div>
 
-        <div className='connection-status' style={{ marginBottom: '20px' }}>
+        <div className='mb-5'>
           <div
-            className='status-indicator'
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              padding: '8px 16px',
-              borderRadius: '20px',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              fontSize: '14px',
-            }}
+            className='flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm'
           >
             <div
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: getConnectionStatusColor(),
-              }}
+              className='w-2 h-2 rounded-full shrink-0'
+              style={{ backgroundColor: getConnectionStatusColor() }}
             />
             {getConnectionStatusText()}
           </div>
@@ -214,19 +191,7 @@ const HomePage: React.FC = () => {
               placeholder='Enter your name'
               maxLength={20}
               disabled={isJoining}
-              style={{
-                width: '100%',
-                padding: '15px 20px',
-                borderRadius: '25px',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                background: 'rgba(255, 255, 255, 0.1)',
-                color: 'white',
-                fontSize: '16px',
-                outline: 'none',
-                marginBottom: '20px',
-                backdropFilter: 'blur(10px)',
-                textAlign: 'center',
-              }}
+              className='w-full px-5 py-[15px] rounded-[25px] border-2 border-white/30 bg-white/10 text-white text-base outline-none mb-5 backdrop-blur-[10px] text-center focus:border-white/60 focus:shadow-[0_0_0_2px_rgba(102,126,234,0.3)] placeholder:text-white/50'
               onKeyPress={e => {
                 if (e.key === 'Enter' && !isJoining) {
                   handleJoinGame()
@@ -236,19 +201,13 @@ const HomePage: React.FC = () => {
           </div>
 
           <button
-            className='btn btn-primary'
+            className='btn btn-primary w-full text-[18px] px-[30px] py-[15px] mb-5'
             onClick={handleJoinGame}
             disabled={isJoining || !playerName.trim()}
-            style={{
-              width: '100%',
-              fontSize: '18px',
-              padding: '15px 30px',
-              marginBottom: '20px',
-            }}
           >
             {isJoining ? (
               <>
-                <div className='loading' />
+                <div className='inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin' />
                 Joining Game...
               </>
             ) : (
@@ -261,49 +220,41 @@ const HomePage: React.FC = () => {
         </div>
 
         <div className='game-info'>
-          <div className='info-grid'>
-            <div className='info-item'>
+          <div className='grid grid-cols-2 gap-5 mb-[30px]'>
+            <div className='flex items-center gap-[15px] p-[15px] bg-white/5 rounded-[15px] border border-white/10'>
               <Users size={24} />
               <div>
-                <h3>5-12 Players</h3>
-                <p>Multiplayer battles</p>
+                <h3 className='m-0 text-[1.1em] text-white'>5-12 Players</h3>
+                <p className='m-0 text-[0.9em] text-white/70'>Multiplayer battles</p>
               </div>
             </div>
-            <div className='info-item'>
+            <div className='flex items-center gap-[15px] p-[15px] bg-white/5 rounded-[15px] border border-white/10'>
               <Settings size={24} />
               <div>
-                <h3>5 Minutes</h3>
-                <p>Fast-paced rounds</p>
+                <h3 className='m-0 text-[1.1em] text-white'>5 Minutes</h3>
+                <p className='m-0 text-[0.9em] text-white/70'>Fast-paced rounds</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className='game-rules'>
-          <h3>
+        <div className='bg-white/5 rounded-[15px] p-5 border border-white/10'>
+          <h3 className='flex items-center gap-2.5 mb-[15px] text-white text-[1.2em]'>
             <Info size={20} />
             How to Play
           </h3>
-          <ul className='text-left'>
-            <li>• Move with the joystick on the left</li>
-            <li>• Eat smaller players to grow</li>
-            <li>• Split to move faster or escape</li>
-            <li>• Spit to lose size and gain speed</li>
-            <li>• Last player standing wins!</li>
+          <ul className='list-none p-0 m-0 text-left'>
+            <li className='py-1 text-white/80 text-[0.95em]'>• Move with the joystick on the left</li>
+            <li className='py-1 text-white/80 text-[0.95em]'>• Eat smaller players to grow</li>
+            <li className='py-1 text-white/80 text-[0.95em]'>• Split to move faster or escape</li>
+            <li className='py-1 text-white/80 text-[0.95em]'>• Spit to lose size and gain speed</li>
+            <li className='py-1 text-white/80 text-[0.95em]'>• Last player standing wins!</li>
           </ul>
         </div>
       </div>
 
       <style>{`
-        .home-page {
-          width: 100vw;
-          height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 35%, #0f0f23 100%);
-        }
-
+        /* Gradient text — no Tailwind equivalent */
         .game-logo h1 {
           font-size: 3em;
           margin-bottom: 10px;
@@ -314,91 +265,9 @@ const HomePage: React.FC = () => {
           text-align: center;
         }
 
-        .game-logo p {
-          font-size: 1.2em;
-          color: rgba(255, 255, 255, 0.8);
-          text-align: center;
-          margin-bottom: 30px;
-        }
-
-        .info-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 30px;
-        }
-
-        .info-item {
-          display: flex;
-          align-items: center;
-          gap: 15px;
-          padding: 15px;
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 15px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .info-item h3 {
-          margin: 0;
-          font-size: 1.1em;
-          color: #fff;
-        }
-
-        .info-item p {
-          margin: 0;
-          font-size: 0.9em;
-          color: rgba(255, 255, 255, 0.7);
-        }
-
-        .game-rules {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 15px;
-          padding: 20px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .game-rules h3 {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-bottom: 15px;
-          color: #fff;
-          font-size: 1.2em;
-        }
-
-        .game-rules ul {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-
-        .game-rules li {
-          padding: 5px 0;
-          color: rgba(255, 255, 255, 0.8);
-          font-size: 0.95em;
-        }
-
-        input:focus {
-          border-color: rgba(255, 255, 255, 0.6) !important;
-          box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.3) !important;
-        }
-
-        input::placeholder {
-          color: rgba(255, 255, 255, 0.5);
-        }
-
         @media (max-width: 768px) {
           .game-logo h1 {
             font-size: 2.5em;
-          }
-
-          .info-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .menu {
-            min-width: 320px;
-            margin: 20px;
           }
         }
       `}</style>

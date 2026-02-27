@@ -1,6 +1,7 @@
 import type { Server as SocketIOServer } from 'socket.io'
 import { config } from '../config.ts'
 import { GameRoom } from './room.ts'
+import { RoomStatus } from '../types/index.ts'
 
 export class GameEngine {
   private rooms = new Map<string, GameRoom>()
@@ -42,10 +43,20 @@ export class GameEngine {
   /** Main tick loop. */
   private startLoop() {
     this.tickTimer = setInterval(() => {
-      for (const room of this.rooms.values()) {
+      for (const [roomId, room] of this.rooms) {
+        // Clean up finished rooms so they stop occupying the loop
+        if (room.status === RoomStatus.FINISHED) {
+          this.rooms.delete(roomId)
+          continue
+        }
+
         room.update() // physics, AI, spawns
-        const state = room.getGameState()
-        room.broadcast(state) // send to all clients in that room
+
+        // Only broadcast live state to clients while the game is actually running
+        if (room.status === RoomStatus.PLAYING) {
+          const state = room.getGameState()
+          room.broadcast(state)
+        }
       }
     }, config.TICK_RATE)
   }

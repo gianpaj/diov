@@ -24,7 +24,8 @@ const WaitingRoom: React.FC = () => {
     startGame,
   } = useSocketStore()
 
-  const { gameState, uiState, updateUIState, gameConfig, setGameState } = useGameStore()
+  const { gameState, uiState, updateUIState, gameConfig, setGameState, setLocalPlayerId } =
+    useGameStore()
 
   const socketId = socket?.id
 
@@ -47,7 +48,7 @@ const WaitingRoom: React.FC = () => {
       // This covers the initial join and any missed discrete events.
       setPlayers(Object.values(state.players))
 
-      // If game is starting, show countdown and navigate
+      // If game is starting, show countdown
       if (state.status === GameStatus.STARTING) {
         const timeUntilStart = state.startTime - Date.now()
         if (timeUntilStart > 0) {
@@ -55,8 +56,13 @@ const WaitingRoom: React.FC = () => {
         }
       }
 
-      // If game is playing, navigate to game
+      // If game is playing, resolve the local player then navigate.
+      // setLocalPlayerId also populates localPlayer from the incoming state,
+      // so GamePage won't be stuck in the loading guard.
       if (state.status === GameStatus.PLAYING) {
+        if (socketId) {
+          setLocalPlayerId(socketId)
+        }
         navigate('/game')
       }
     })
@@ -75,12 +81,11 @@ const WaitingRoom: React.FC = () => {
     })
 
     const unsubscribeGameStarted = onGameStarted(data => {
+      // Just drive the visible countdown — navigation is handled exclusively
+      // by the onGameStateUpdate handler when status flips to PLAYING.
+      // Having a second navigate() here caused a spurious re-navigation
+      // 5 s after the game had already started.
       setCountdown(data.countdown)
-
-      // Navigate to game after countdown
-      setTimeout(() => {
-        navigate('/game')
-      }, data.countdown * 1000)
     })
 
     return () => {

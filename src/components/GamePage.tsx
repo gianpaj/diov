@@ -23,17 +23,41 @@ const GamePage: React.FC = () => {
 
   const {
     gameState,
-    localPlayer,
+    localPlayer: storedLocalPlayer,
     camera,
     isGameActive,
     updateCamera,
     setMovementInput,
     setSplitPressed,
     setSpitPressed,
+    setLocalPlayerId,
   } = useGameStore()
 
-  const { sendPlayerInput, sendSplit, sendSpit, onGameStateUpdate, onGameEnded, leaveGame } =
-    useSocketStore()
+  const {
+    sendPlayerInput,
+    sendSplit,
+    sendSpit,
+    onGameStateUpdate,
+    onGameEnded,
+    leaveGame,
+    socket,
+  } = useSocketStore()
+
+  // Derive localPlayer from the store if available, or fall back to looking
+  // up our own socket ID in gameState. This handles the case where navigation
+  // happened before setLocalPlayerId was called (e.g. fast state transitions).
+  const socketId = socket?.id
+  const localPlayer =
+    storedLocalPlayer ??
+    (socketId && gameState?.players[socketId] ? gameState.players[socketId] : null)
+
+  // If we derived the player from gameState but the store doesn't know yet,
+  // sync it so subsequent renders and effects have the correct value.
+  useEffect(() => {
+    if (!storedLocalPlayer && socketId && gameState?.players[socketId]) {
+      setLocalPlayerId(socketId)
+    }
+  }, [storedLocalPlayer, socketId, gameState, setLocalPlayerId])
 
   // Ref used to throttle sendPlayerInput — avoids flooding the socket on every
   // render frame. We target NETWORK_UPDATE_RATE (20 Hz = 50 ms between sends).

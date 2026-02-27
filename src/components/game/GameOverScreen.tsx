@@ -1,5 +1,5 @@
 import React from 'react'
-import { Trophy, Home, RotateCcw, Users, Clock, Target } from 'lucide-react'
+import { Trophy, Home, Users, Clock, Target } from 'lucide-react'
 import { useGameStore } from '@/stores/GameStore'
 
 interface GameOverScreenProps {
@@ -12,7 +12,6 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
   if (!gameState || !localPlayer) return null
 
   // Get final stats
-  const alivePlayers = Object.values(gameState.players).filter(p => p.isAlive)
   const allPlayers = Object.values(gameState.players).sort((a, b) => b.size - a.size)
   const playerRank = allPlayers.findIndex(p => p.id === localPlayer.id) + 1
   const isWinner = playerRank === 1 && localPlayer.isAlive
@@ -46,34 +45,36 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
   }
 
   return (
-    <div className="game-over-screen">
-      <div className="game-over-content fade-in">
-        <div className="result-header">
-          <div className="result-icon" style={{ color: getResultColor() }}>
+    <div className='game-over-screen'>
+      <div className='game-over-content fade-in'>
+        <div className='result-header'>
+          <div className='result-icon' style={{ color: getResultColor() }}>
             {getResultIcon()}
           </div>
           <h1 style={{ color: getResultColor() }}>{getResultTitle()}</h1>
-          <p className="result-subtitle">
-            {isWinner ? 'You are the last circle standing!' : `You finished ${playerRank}${getOrdinalSuffix(playerRank)} place`}
+          <p className='result-subtitle'>
+            {isWinner
+              ? 'You are the last circle standing!'
+              : `You finished ${playerRank}${getOrdinalSuffix(playerRank)} place`}
           </p>
         </div>
 
-        <div className="stats-container">
-          <div className="main-stats">
-            <div className="stat-card rank">
-              <div className="stat-icon">
+        <div className='stats-container'>
+          <div className='main-stats'>
+            <div className='stat-card rank'>
+              <div className='stat-icon'>
                 <Target size={24} />
               </div>
-              <div className="stat-info">
-                <div className="stat-value">#{playerRank}</div>
-                <div className="stat-label">Final Rank</div>
+              <div className='stat-info'>
+                <div className='stat-value'>#{playerRank}</div>
+                <div className='stat-label'>Final Rank</div>
               </div>
             </div>
 
-            <div className="stat-card size">
-              <div className="stat-icon">
+            <div className='stat-card size'>
+              <div className='stat-icon'>
                 <div
-                  className="size-indicator"
+                  className='size-indicator'
                   style={{
                     backgroundColor: localPlayer.color,
                     width: '24px',
@@ -82,78 +83,71 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
                   }}
                 />
               </div>
-              <div className="stat-info">
-                <div className="stat-value">{Math.round(localPlayer.size)}</div>
-                <div className="stat-label">Final Size</div>
+              <div className='stat-info'>
+                <div className='stat-value'>{Math.round(localPlayer.size)}</div>
+                <div className='stat-label'>Final Size</div>
               </div>
             </div>
 
-            <div className="stat-card players">
-              <div className="stat-icon">
+            <div className='stat-card players'>
+              <div className='stat-icon'>
                 <Users size={24} />
               </div>
-              <div className="stat-info">
-                <div className="stat-value">{totalPlayers}</div>
-                <div className="stat-label">Total Players</div>
+              <div className='stat-info'>
+                <div className='stat-value'>{totalPlayers}</div>
+                <div className='stat-label'>Total Players</div>
               </div>
             </div>
 
-            <div className="stat-card time">
-              <div className="stat-icon">
+            <div className='stat-card time'>
+              <div className='stat-icon'>
                 <Clock size={24} />
               </div>
-              <div className="stat-info">
-                <div className="stat-value">{formatDuration(gameDuration)}</div>
-                <div className="stat-label">Game Duration</div>
+              <div className='stat-info'>
+                <div className='stat-value'>{formatDuration(gameDuration)}</div>
+                <div className='stat-label'>Game Duration</div>
               </div>
             </div>
           </div>
 
           {/* Leaderboard */}
-          <div className="leaderboard">
+          <div className='leaderboard'>
             <h3>Final Leaderboard</h3>
-            <div className="leaderboard-list">
+            <div className='leaderboard-list'>
               {allPlayers.slice(0, 8).map((player, index) => (
                 <div
                   key={player.id}
                   className={`leaderboard-item ${player.id === localPlayer.id ? 'current-player' : ''}`}
                 >
-                  <div className="player-rank">#{index + 1}</div>
-                  <div className="player-avatar">
-                    <div
-                      className="avatar-circle"
-                      style={{ backgroundColor: player.color }}
-                    >
+                  <div className='player-rank'>#{index + 1}</div>
+                  <div className='player-avatar'>
+                    <div className='avatar-circle' style={{ backgroundColor: player.color }}>
                       {player.name.charAt(0).toUpperCase()}
                     </div>
                   </div>
-                  <div className="player-info">
-                    <div className="player-name">
+                  <div className='player-info'>
+                    <div className='player-name'>
                       {player.name}
-                      {player.id === localPlayer.id && (
-                        <span className="you-indicator">(You)</span>
-                      )}
+                      {player.id === localPlayer.id && <span className='you-indicator'>(You)</span>}
                     </div>
-                    <div className="player-status">
-                      {player.isAlive ? 'Alive' : 'Eliminated'}
-                    </div>
+                    <div className='player-status'>{player.isAlive ? 'Alive' : 'Eliminated'}</div>
                   </div>
-                  <div className="player-size">{Math.round(player.size)}</div>
+                  <div className='player-size'>{Math.round(player.size)}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="action-buttons">
-          <button className="btn btn-primary" onClick={onRestart}>
+        <div className='action-buttons'>
+          <button className='btn btn-primary' onClick={onRestart}>
             <Home size={20} />
             Play Again
           </button>
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .game-over-screen {
           position: absolute;
           top: 0;

@@ -4,11 +4,46 @@ Prioritised task list. Items marked 🔴 are **blocking** (the game cannot be pl
 
 ---
 
+## 🔵 Wire-Format Type Contract (Option C — Code Generation)
+
+**Status: implemented.** The canonical types now live in one place and are generated into both packages.
+
+### How it works
+
+```
+packages/shared/src/schema.ts   ← Zod v4 schemas (single source of truth)
+packages/shared/src/events.ts   ← socket event name constants
+packages/shared/src/validators.ts ← runtime safeParse helpers
+       │
+       └─ pnpm codegen
+            ├─ backend/src/types/generated.ts   (do not edit by hand)
+            └─ src/types/generated.ts           (do not edit by hand)
+```
+
+### Workflow — changing the wire format
+
+1. Edit `packages/shared/src/schema.ts` (Zod schema)
+2. Run `pnpm codegen` from the repo root (or `pnpm --filter @battle-circles/shared codegen`)
+3. Commit `schema.ts` + both `generated.ts` files together in one commit
+4. Run `pnpm type-check:all` to verify all three packages compile
+
+### Workflow — changing event names
+
+1. Edit `packages/shared/src/events.ts`
+2. No codegen needed — the file is imported directly via path alias
+3. Run `pnpm type-check:all`
+
+### Remaining tasks
+
+- [ ] Remove the now-redundant divergence comment block from `docs/testing-and-contract-sync.md` (the table at the bottom) and replace with a pointer to `packages/shared/src/schema.ts`
+- [ ] Update `backend/src/networking/validators.ts` to fully remove the old local `moveSchema` / `vector2DSchema` definitions (currently kept as deprecated aliases — safe to delete once all call sites are updated)
+- [ ] Add `pnpm codegen` as a step in the GitHub Actions CI pipeline so generated files are verified on every PR
+- [ ] Add a CI check that fails if a developer edits `backend/src/types/generated.ts` or `src/types/generated.ts` directly (e.g. a pre-commit hook that re-runs codegen and diffs)
+
+
+---
+
 ## 🔴 Blocking — Fix Before Anything Else
-
-### Backend: Missing Dependencies
-
-- [ ] Add `tsx` (or `ts-node`) to `backend/package.json` devDependencies — `nodemon src/server.ts` cannot run `.ts` files without a TypeScript runner; update `nodemon` config accordingly
 
 ### Backend: No `.env.example`
 
@@ -54,12 +89,22 @@ Prioritised task list. Items marked 🔴 are **blocking** (the game cannot be pl
 - [x] Backend types (`backend/src/types/index.ts`): players as `PlayerState[]` array, positions as flat `x: number, y: number`, size as `radius: number`, no `isAlive` field
 - [x] Every `game_state` broadcast will fail to render in the frontend
 - [x] Recommended fix: update `room.getGameState()` to emit a shape matching the frontend `GameState` type (use `position`, `size`, `isAlive`, keyed record)
-- [x] Either way: document the canonical wire format and keep both sides in sync
+- [x] Canonical wire format established in `packages/shared/src/schema.ts`; both sides now import from `generated.ts` — see 🔵 section above
 
 ### Backend: `getGameState()` Missing `status` Field (TypeScript Error)
 
 - [x] `room.ts` line 203: `getGameState()` returns an object missing the `status` field required by the `GameState` type
 - [x] Add `status: this.status` to the returned object
+
+### Frontend ↔ Backend: Type Divergences
+
+The following divergences existed between the old hand-written type files. All are now resolved by the shared schema — the generated types are the single source of truth.
+
+- [x] `GameEndedMessage.data.stats` — frontend expected `stats: GameStats[]`; backend never sent it. Now `stats` is `optional` in `GameEndedPayload` in the schema.
+- [x] `GameStatus.ENDING` — frontend enum had a status the backend never emits. Removed from the schema; `GameStatus` is now derived from `RoomStatus` (no `ENDING` value).
+- [x] `GameState.hostId` — frontend typed as `hostId?: string` (optional); backend always sets it. Now `hostId: string` (required) in the schema.
+- [x] `Knibble.spawnTime` / `Knibble.value` — frontend-only extra fields. Kept in the frontend `Knibble` type alias but not in the shared `KnibbleState` schema.
+- [x] `Player.splitPieces` — frontend-only concept. Kept in the frontend `Player` interface (extends `PlayerState`) but not on the wire.
 
 ### Frontend: `styled-jsx` Not Installed — TypeScript Errors in Every Component
 
@@ -78,6 +123,12 @@ Prioritised task list. Items marked 🔴 are **blocking** (the game cannot be pl
 ---
 
 ## 🟡 Important — Needed for a Working Game
+
+### Frontend ↔ Backend: Duplicate Event Name Constants
+
+- [x] `backend/src/game/events.ts` is now a thin re-export shim over `packages/shared/src/events.ts`
+- [x] Frontend `SocketStore.tsx` still defines local `EV_*` constants — update these to import from `@battle-circles/shared/events` (the Vite alias is already wired)
+- [ ] Delete local `EV_*` constants in `SocketStore.tsx` once all references are updated to use shared imports
 
 ### Backend: `GameRoom.fromPlain()` / `toPlain()` Not Fully Implemented
 
@@ -164,12 +215,17 @@ The game has no real presence system. The mechanical pieces (Maps, join/leave br
 ### Infrastructure
 - [ ] Create `docker-compose.yml` with `frontend`, `backend`, `redis`, `postgres` services
 - [ ] Add `backend/.env.example` (covered above) and `diov/.env.example` for frontend
-- [ ] Add GitHub Actions CI: lint + type-check on push
+- [ ] Add GitHub Actions CI: lint + type-check on push (`pnpm type-check:all` covers all three packages)
+- [ ] Add CI step that runs `pnpm codegen` and fails if the generated files differ from what is committed (prevents hand-edits of generated files)
 
 ### Testing
+
 - [ ] Write unit tests for `Physics.move()` and `Physics.isColliding()`
 - [ ] Write unit tests for `GameRoom` collision resolution and knibble spawning
-- [ ] Write integration tests for the `join_game` → `start_game` → `game_state` socket flow
+- [ ] Write integration tests for the `join_game` → `start_game` → `game_state` socket flow (see `docs/testing-and-contract-sync.md` for ready-to-paste examples)
+- [ ] Add `vitest` + `socket.io-client` to `backend/package.json` devDependencies (already listed — run `pnpm install` in `backend/`)
+- [ ] Create `backend/tests/` directory with `helpers/`, `integration/`, and `unit/` subdirectories
+- [ ] Use Zod schemas from `@battle-circles/shared/validators` in integration tests to validate every broadcast payload shape
 - [ ] Add frontend component tests with Vitest + Testing Library for `WaitingRoom` and `GameHUD`
 
 ### PWA
@@ -204,8 +260,8 @@ The game has no real presence system. The mechanical pieces (Maps, join/leave br
 - [ ] Add `name` to `PlayerState` and broadcast it; render player name above the circle in `GamePage.tsx`
 
 ### Game: Knibble Colours
-- [ ] Backend `KnibbleState` has no `color` field; frontend `Knibble` type expects one
-- [ ] Add `color` to `KnibbleState` and assign from a palette on spawn
+
+- [x] `KnibbleState` now has a `color` field in the shared schema — the backend already assigns it from `KNIBBLE_COLORS` in `room.ts`
 
 ### Networking
 - [ ] Add rate limiting per socket to prevent input flooding

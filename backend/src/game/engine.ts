@@ -7,7 +7,7 @@ export class GameEngine {
   // private io: SocketIOServer
   private tickTimer?: NodeJS.Timeout
 
-  constructor(io: SocketIOServer) {
+  constructor(_io: SocketIOServer) {
     // this.io = io
     // await loadFromDisk();
     this.startLoop()

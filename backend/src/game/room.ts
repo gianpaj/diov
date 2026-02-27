@@ -27,7 +27,6 @@ export class GameRoom {
   startTime: number = 0 // epoch ms when the match actually starts
   endTime?: number // epoch ms when the match ended
 
-  private readonly roomConfig: RoomConfig
   private players = new Map<string, Player>()
   private sockets = new Map<string, Socket>()
 
@@ -43,7 +42,6 @@ export class GameRoom {
 
   constructor(roomConfig: RoomConfig) {
     this.id = roomConfig.id
-    this.roomConfig = roomConfig
     this.MAX_PLAYERS = roomConfig.maxPlayers
     this.bounds = { x: 0, y: 0, width: 2000, height: 2000 }
     this.spawnKnibble()

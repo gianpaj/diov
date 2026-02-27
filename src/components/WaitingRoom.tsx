@@ -3,13 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import { Users, Clock, Play, ArrowLeft, Wifi, WifiOff } from 'lucide-react'
 import { useSocketStore } from '@/stores/SocketStore'
 import { useGameStore } from '@/stores/GameStore'
-import { GameStatus } from '@/types'
+import { GameStatus, type PlayerState } from '@/types'
 
 const WaitingRoom: React.FC = () => {
   const navigate = useNavigate()
   const [countdown, setCountdown] = useState<number | null>(null)
+  // Local player list — updated immediately from player_joined / player_left
+  // events so the UI refreshes even during WAITING (when the tick loop is paused).
+  const [players, setPlayers] = useState<PlayerState[]>([])
 
   const {
+    socket,
     isConnected,
     connectionStatus,
     onGameStateUpdate,
@@ -22,17 +26,26 @@ const WaitingRoom: React.FC = () => {
 
   const { gameState, uiState, updateUIState, gameConfig, setGameState } = useGameStore()
 
-  // Get player list from game state
-  const players = gameState ? Object.values(gameState.players) : []
+  const socketId = socket?.id
+
+  // Derive player count and host status from local list + game state
   const playerCount = players.length
   const minPlayers = gameConfig.minPlayers
   const maxPlayers = gameConfig.maxPlayers
   const canStartGame = playerCount >= minPlayers
+  // Use socket id to determine if this client is the host.
+  // Falls back to false (not undefined) so the Start button never shows for guests.
+  const hostId = gameState?.hostId
+  const isHost = Boolean(socketId && hostId && socketId === hostId)
 
   useEffect(() => {
     // Set up socket event listeners
     const unsubscribeGameState = onGameStateUpdate(state => {
       setGameState(state)
+
+      // Sync local player list from the authoritative game_state snapshot.
+      // This covers the initial join and any missed discrete events.
+      setPlayers(Object.values(state.players))
 
       // If game is starting, show countdown and navigate
       if (state.status === GameStatus.STARTING) {
@@ -48,16 +61,20 @@ const WaitingRoom: React.FC = () => {
       }
     })
 
+    // Update the local player list immediately — no need to wait for the next tick.
     const unsubscribePlayerJoined = onPlayerJoined(data => {
-      console.log('Player joined:', data.player.name)
+      setPlayers(prev => {
+        // Avoid duplicates if the game_state tick already added this player.
+        if (prev.some(p => p.id === data.player.id)) return prev
+        return [...prev, data.player]
+      })
     })
 
     const unsubscribePlayerLeft = onPlayerLeft(data => {
-      console.log('Player left:', data.playerId)
+      setPlayers(prev => prev.filter(p => p.id !== data.playerId))
     })
 
     const unsubscribeGameStarted = onGameStarted(data => {
-      console.log('Game started!')
       setCountdown(data.countdown)
 
       // Navigate to game after countdown
@@ -143,12 +160,6 @@ const WaitingRoom: React.FC = () => {
       </div>
     )
   }
-
-  const isHost = true
-  // const isHost = uiState.socket?.id === gameState?.hostId
-  // canStartGame && uiState.playerName === gameState?.hostId
-
-  // console.log({ uiState, gameState })
 
   return (
     <div className='waiting-room'>

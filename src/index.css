@@ -1,3 +1,50 @@
+@import 'tailwindcss';
+
+/* ── Tailwind v4 theme tokens ─────────────────────────────────────────────────
+   These CSS custom properties are consumed by Tailwind utility classes AND by
+   the remaining hand-written styles below.  Define game colours once here so
+   both systems stay in sync.
+   ──────────────────────────────────────────────────────────────────────────── */
+@theme {
+  /* Brand / game colours */
+  --color-game-bg: #0f0f23;
+  --color-game-bg-mid: #16213e;
+  --color-game-bg-top: #1a1a2e;
+  --color-accent-red: #ff6b6b;
+  --color-accent-teal: #4ecdc4;
+  --color-accent-blue: #45b7d1;
+  --color-accent-yellow: #ffeaa7;
+  --color-accent-purple: #764ba2;
+  --color-ui-primary: #667eea;
+  --color-spit: #4a90e2;
+  --color-boundary: #ff4757;
+
+  /* Glass / overlay surfaces */
+  --color-glass-sm: rgba(0, 0, 0, 0.4);
+  --color-glass-md: rgba(0, 0, 0, 0.6);
+  --color-glass-lg: rgba(0, 0, 0, 0.8);
+  --color-glass-xl: rgba(0, 0, 0, 0.95);
+  --color-border-dim: rgba(255, 255, 255, 0.1);
+  --color-border-mid: rgba(255, 255, 255, 0.2);
+  --color-border-lit: rgba(255, 255, 255, 0.3);
+
+  /* Border radii */
+  --radius-pill: 9999px;
+  --radius-card: 1.25rem; /* 20px */
+  --radius-btn: 1.5625rem; /* 25px */
+
+  /* Backdrop blurs */
+  --blur-glass: blur(20px);
+  --blur-hud: blur(15px);
+  --blur-light: blur(10px);
+
+  /* Z-index scale */
+  --z-game: 1;
+  --z-ui: 10;
+  --z-hud: 15;
+  --z-overlay: 100;
+}
+
 /* Global CSS Reset and Base Styles */
 *,
 *::before,
@@ -14,7 +61,8 @@ body {
   overflow: hidden;
   margin: 0;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: #000;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Play, Users, Settings, Info } from 'lucide-react'
 import { useSocketStore } from '@/stores/SocketStore'
@@ -10,28 +10,95 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate()
 
   const { connect, joinGame, isConnected, connectionStatus } = useSocketStore()
+  const [joinError, setJoinError] = useState<string | null>(null)
+
+  // Clear error as soon as a connection is re-established
+  useEffect(() => {
+    if (isConnected) setJoinError(null)
+  }, [isConnected])
   const { updateUIState } = useGameStore()
+
+  // Ref to hold the resolve/reject callbacks of the in-flight connection promise
+  // so the socket event handlers set up inside `waitForConnection` can call them.
+  const connectionResolverRef = useRef<{
+    resolve: () => void
+    reject: (reason: string) => void
+  } | null>(null)
+
+  // Watch connectionStatus and settle the in-flight promise when the outcome
+  // is known. This runs every time connectionStatus changes.
+  const connectionStatusRef = useRef(connectionStatus)
+  useEffect(() => {
+    connectionStatusRef.current = connectionStatus
+
+    if (!connectionResolverRef.current) return
+
+    if (connectionStatus === 'connected') {
+      connectionResolverRef.current.resolve()
+      connectionResolverRef.current = null
+    } else if (connectionStatus === 'error') {
+      connectionResolverRef.current.reject('Could not connect to the server. Is it running?')
+      connectionResolverRef.current = null
+    }
+  }, [connectionStatus])
+
+  const waitForConnection = (timeoutMs = 6000): Promise<void> =>
+    new Promise((resolve, reject) => {
+      // Already connected — nothing to wait for.
+      if (connectionStatusRef.current === 'connected') {
+        resolve()
+        return
+      }
+
+      connectionResolverRef.current = { resolve, reject }
+
+      // Timeout guard — rejects if the server never responds.
+      const timer = setTimeout(() => {
+        if (connectionResolverRef.current) {
+          connectionResolverRef.current.reject(
+            'Connection timed out. Check that the server is running.'
+          )
+          connectionResolverRef.current = null
+        }
+      }, timeoutMs)
+
+      // Wrap resolve/reject to always clear the timeout.
+      const originalResolve = connectionResolverRef.current.resolve
+      const originalReject = connectionResolverRef.current.reject
+      connectionResolverRef.current = {
+        resolve: () => {
+          clearTimeout(timer)
+          originalResolve()
+        },
+        reject: reason => {
+          clearTimeout(timer)
+          originalReject(reason)
+        },
+      }
+    })
 
   const handleJoinGame = async () => {
     if (!playerName.trim()) {
-      alert('Please enter your name')
+      setJoinError('Please enter your name.')
       return
     }
 
     if (playerName.trim().length > 20) {
-      alert('Name must be 20 characters or less')
+      setJoinError('Name must be 20 characters or less.')
       return
     }
 
+    setJoinError(null)
     setIsJoining(true)
 
     try {
-      // Connect to server if not already connected
       if (!isConnected) {
         connect()
-        // Wait a bit for connection to establish
-        await new Promise(resolve => setTimeout(resolve, 1000))
       }
+
+      // Block here until the socket is actually connected (or we time out /
+      // get a hard error). Only navigate if this resolves successfully.
+      await waitForConnection()
 
       // Update UI state
       updateUIState({
@@ -43,11 +110,12 @@ const HomePage: React.FC = () => {
       // Join the game
       joinGame(playerName.trim())
 
-      // Navigate to waiting room
+      // Navigate to waiting room — only reached on successful connection
       navigate('/waiting')
     } catch (error) {
+      const message = typeof error === 'string' ? error : 'Failed to join game. Please try again.'
       console.error('Failed to join game:', error)
-      alert('Failed to join game. Please try again.')
+      setJoinError(message)
     } finally {
       setIsJoining(false)
     }
@@ -85,16 +153,34 @@ const HomePage: React.FC = () => {
   }
 
   return (
-    <div className="home-page">
-      <div className="menu fade-in">
-        <div className="game-logo">
+    <div className='home-page'>
+      <div className='menu fade-in'>
+        <div className='game-logo'>
+          {joinError && (
+            <div
+              className='join-error'
+              role='alert'
+              style={{
+                marginBottom: '16px',
+                padding: '10px 16px',
+                borderRadius: '12px',
+                background: 'rgba(255, 107, 107, 0.15)',
+                border: '1px solid rgba(255, 107, 107, 0.5)',
+                color: '#FF6B6B',
+                fontSize: '14px',
+                textAlign: 'center',
+              }}
+            >
+              {joinError}
+            </div>
+          )}
           <h1>Battle Circles</h1>
           <p>Eat or be eaten in this multiplayer battle arena!</p>
         </div>
 
-        <div className="connection-status" style={{ marginBottom: '20px' }}>
+        <div className='connection-status' style={{ marginBottom: '20px' }}>
           <div
-            className="status-indicator"
+            className='status-indicator'
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -119,13 +205,13 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="join-form">
-          <div className="input-group">
+        <div className='join-form'>
+          <div className='input-group'>
             <input
-              type="text"
+              type='text'
               value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Enter your name"
+              onChange={e => setPlayerName(e.target.value)}
+              placeholder='Enter your name'
               maxLength={20}
               disabled={isJoining}
               style={{
@@ -141,7 +227,7 @@ const HomePage: React.FC = () => {
                 backdropFilter: 'blur(10px)',
                 textAlign: 'center',
               }}
-              onKeyPress={(e) => {
+              onKeyPress={e => {
                 if (e.key === 'Enter' && !isJoining) {
                   handleJoinGame()
                 }
@@ -150,7 +236,7 @@ const HomePage: React.FC = () => {
           </div>
 
           <button
-            className="btn btn-primary"
+            className='btn btn-primary'
             onClick={handleJoinGame}
             disabled={isJoining || !playerName.trim()}
             style={{
@@ -162,7 +248,7 @@ const HomePage: React.FC = () => {
           >
             {isJoining ? (
               <>
-                <div className="loading" />
+                <div className='loading' />
                 Joining Game...
               </>
             ) : (
@@ -174,16 +260,16 @@ const HomePage: React.FC = () => {
           </button>
         </div>
 
-        <div className="game-info">
-          <div className="info-grid">
-            <div className="info-item">
+        <div className='game-info'>
+          <div className='info-grid'>
+            <div className='info-item'>
               <Users size={24} />
               <div>
                 <h3>5-12 Players</h3>
                 <p>Multiplayer battles</p>
               </div>
             </div>
-            <div className="info-item">
+            <div className='info-item'>
               <Settings size={24} />
               <div>
                 <h3>5 Minutes</h3>
@@ -193,12 +279,12 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="game-rules">
+        <div className='game-rules'>
           <h3>
             <Info size={20} />
             How to Play
           </h3>
-          <ul>
+          <ul className='text-left'>
             <li>• Move with the joystick on the left</li>
             <li>• Eat smaller players to grow</li>
             <li>• Split to move faster or escape</li>
@@ -208,7 +294,7 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .home-page {
           width: 100vw;
           height: 100vh;

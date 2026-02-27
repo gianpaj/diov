@@ -5,11 +5,7 @@ import { useSocketStore } from '@/stores/SocketStore'
 import { GameStatus } from '@/types'
 
 const GameHUD: React.FC = () => {
-  const {
-    gameState,
-    localPlayer,
-    gameConfig,
-  } = useGameStore()
+  const { gameState, localPlayer, gameConfig } = useGameStore()
 
   const { latency } = useSocketStore()
 
@@ -51,54 +47,61 @@ const GameHUD: React.FC = () => {
   const isTimeRunningOut = timeLeft < 60000 // Less than 1 minute
 
   return (
-    <div className="game-hud">
-      <div className="hud-container">
+    <div className='game-hud'>
+      <div className='hud-container'>
         {/* Time remaining */}
-        <div className={`hud-item time ${isTimeRunningOut ? 'warning' : ''}`}>
+        <div
+          className={`hud-item time ${isTimeRunningOut ? 'warning' : ''}`}
+          style={
+            {
+              '--dot-color': isTimeRunningOut ? '#ff6b6b' : '#4ecdc4',
+            } as React.CSSProperties
+          }
+        >
           <Clock size={18} />
-          <span className="hud-value">{formatTime(timeLeft)}</span>
+          <span className='hud-value'>{formatTime(timeLeft)}</span>
         </div>
 
         {/* Player count */}
-        <div className="hud-item players">
+        <div className='hud-item players'>
           <Users size={18} />
-          <span className="hud-value">{aliveCount}</span>
+          <span className='hud-value'>{aliveCount}</span>
         </div>
 
         {/* Player rank */}
-        <div className="hud-item rank">
+        <div className='hud-item rank'>
           <Target size={18} />
-          <span className="hud-value">#{playerRank}</span>
+          <span className='hud-value'>#{playerRank}</span>
         </div>
 
         {/* Player size */}
-        <div className="hud-item size">
+        <div className='hud-item size'>
           <div
-            className="size-circle"
+            className='size-circle'
             style={{
               backgroundColor: localPlayer.color,
               width: Math.max(12, Math.min(localPlayer.size / 3, 24)),
-              height: Math.max(12, Math.min(localPlayer.size / 3, 24))
+              height: Math.max(12, Math.min(localPlayer.size / 3, 24)),
             }}
           />
-          <span className="hud-value">{Math.round(localPlayer.size)}</span>
+          <span className='hud-value'>{Math.round(localPlayer.size)}</span>
         </div>
 
         {/* Network latency (only show if > 100ms) */}
         {latency > 100 && (
           <div className={`hud-item latency ${latency > 200 ? 'warning' : ''}`}>
             <Zap size={16} />
-            <span className="hud-value">{latency}ms</span>
+            <span className='hud-value'>{latency}ms</span>
           </div>
         )}
       </div>
 
       {/* Map boundaries indicator */}
       {gameState.bounds && (
-        <div className="minimap">
-          <div className="minimap-container">
+        <div className='minimap'>
+          <div className='minimap-container'>
             <div
-              className="minimap-boundary"
+              className='minimap-boundary'
               style={{
                 width: '100px',
                 height: '60px',
@@ -111,7 +114,7 @@ const GameHUD: React.FC = () => {
               {/* Player dot on minimap */}
               {localPlayer && (
                 <div
-                  className="minimap-player"
+                  className='minimap-player'
                   style={{
                     position: 'absolute',
                     width: '4px',
@@ -130,7 +133,7 @@ const GameHUD: React.FC = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .game-hud {
           position: absolute;
           top: 0;
@@ -264,14 +267,15 @@ const GameHUD: React.FC = () => {
             width: 80px !important;
             height: 48px !important;
           }
-
-          .minimap-player {
-            left: ${`${((localPlayer?.position.x - (gameState?.bounds?.x || 0)) / (gameState?.bounds?.width || 1)) * 76}px !important`};
-            top: ${`${((localPlayer?.position.y - (gameState?.bounds?.y || 0)) / (gameState?.bounds?.height || 1)) * 44}px !important`};
-          }
         }
 
-        /* Status indicators */
+        /* Status dot on the time HUD item — colour driven by --dot-color CSS var
+           set via inline style on the element so JS state controls it without
+           needing styled-jsx interpolation. */
+        .hud-item.time {
+          position: relative;
+        }
+
         .hud-item.time::before {
           content: '';
           position: absolute;
@@ -281,8 +285,8 @@ const GameHUD: React.FC = () => {
           width: 3px;
           height: 3px;
           border-radius: 50%;
-          background: ${isTimeRunningOut ? '#ff6b6b' : '#4ecdc4'};
-          box-shadow: 0 0 6px ${isTimeRunningOut ? '#ff6b6b' : '#4ecdc4'};
+          background: var(--dot-color, #4ecdc4);
+          box-shadow: 0 0 6px var(--dot-color, #4ecdc4);
         }
 
         /* Smooth transitions */

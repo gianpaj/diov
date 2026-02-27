@@ -30,9 +30,13 @@
       "@/utils/*": ["src/utils/*"],
       "@/stores/*": ["src/stores/*"],
       "@/types/*": ["src/types/*"],
-      "@/assets/*": ["src/assets/*"]
-    }
+      "@/assets/*": ["src/assets/*"],
+      "@battle-circles/shared": ["packages/shared/src/index.ts"],
+      "@battle-circles/shared/events": ["packages/shared/src/events.ts"],
+      "@battle-circles/shared/schema": ["packages/shared/src/schema.ts"],
+      "@battle-circles/shared/validators": ["packages/shared/src/validators.ts"],
+    },
   },
   "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "references": [{ "path": "./tsconfig.node.json" }],
 }

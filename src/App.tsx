@@ -1,4 +1,3 @@
-// import React from 'react'
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom'
 import GamePage from '@/components/GamePage'
 import HomePage from '@/components/HomePage'
@@ -7,10 +6,16 @@ import { useOrientation } from '@/hooks/useOrientation'
 import { GameProvider } from '@/stores/GameStore'
 import { SocketProvider } from '@/stores/SocketStore'
 
+// Allow the orientation gate to be bypassed in two ways:
+//   1. Running in development mode  (import.meta.env.DEV)
+//   2. Adding ?landscape=bypass to the URL  (handy for portrait-only monitors)
+const isOrientationBypassed =
+  import.meta.env.DEV || new URLSearchParams(window.location.search).get('landscape') === 'bypass'
+
 function App() {
   const { isLandscape } = useOrientation()
 
-  if (!isLandscape) {
+  if (!isLandscape && !isOrientationBypassed) {
     return (
       <div className='portrait-warning'>
         <div style={{ fontSize: '48px', marginBottom: '20px' }}>📱➡️📱</div>

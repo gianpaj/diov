@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Stage, Container, Graphics, Text } from '@pixi/react'
-import * as PIXI from 'pixi.js'
+import { Stage, Container, Graphics } from '@pixi/react'
+
 import { Pause, Play, Home } from 'lucide-react'
 import { useSocketStore } from '@/stores/SocketStore'
 import { useGameStore } from '@/stores/GameStore'
 import { useJoystick } from '@/hooks/useJoystick'
-import { GameStatus, GAME_CONSTANTS, COLORS } from '@/types'
+import { GameStatus, COLORS, GAME_CONSTANTS } from '@/types'
 import VirtualJoystick from '@/components/game/VirtualJoystick'
 import GameHUD from '@/components/game/GameHUD'
 import ActionButtons from '@/components/game/ActionButtons'
@@ -14,7 +14,7 @@ import GameOverScreen from '@/components/game/GameOverScreen'
 
 const GamePage: React.FC = () => {
   const navigate = useNavigate()
-  const stageRef = useRef<PIXI.Application>(null)
+
   const [isPaused, setIsPaused] = useState(false)
   const [dimensions, setDimensions] = useState({
     width: window.innerWidth,
@@ -25,7 +25,6 @@ const GamePage: React.FC = () => {
     gameState,
     localPlayer,
     camera,
-    uiState,
     isGameActive,
     updateCamera,
     setMovementInput,
@@ -33,12 +32,19 @@ const GamePage: React.FC = () => {
     setSpitPressed,
   } = useGameStore()
 
-  const {
-    sendPlayerInput,
-    onGameStateUpdate,
-    onGameEnded,
-    leaveGame,
-  } = useSocketStore()
+  const { sendPlayerInput, sendSplit, sendSpit, onGameStateUpdate, onGameEnded, leaveGame } =
+    useSocketStore()
+
+  // Ref used to throttle sendPlayerInput — avoids flooding the socket on every
+  // render frame. We target NETWORK_UPDATE_RATE (20 Hz = 50 ms between sends).
+  const lastInputSentAt = useRef(0)
+
+  // Stable ref to current camera so the camera-follow effect does not need
+  // `camera` in its dependency array (which would cause an infinite loop).
+  const cameraRef = useRef(camera)
+  useEffect(() => {
+    cameraRef.current = camera
+  })
 
   const {
     direction,
@@ -68,40 +74,45 @@ const GamePage: React.FC = () => {
     }
   }, [direction, isGameActive, setMovementInput])
 
-  // Send player input to server
+  // Send player input to server — throttled to NETWORK_UPDATE_RATE (20 Hz).
   useEffect(() => {
     if (!isGameActive() || !localPlayer) return
 
-    const inputData = {
+    const now = Date.now()
+    const interval = 1000 / GAME_CONSTANTS.NETWORK_UPDATE_RATE // 50 ms at 20 Hz
+    if (now - lastInputSentAt.current < interval) return
+
+    lastInputSentAt.current = now
+    sendPlayerInput({
       movement: direction,
       splitPressed: false,
       spitPressed: false,
-    }
-
-    sendPlayerInput(inputData)
+    })
   }, [direction, isGameActive, localPlayer, sendPlayerInput])
 
-  // Update camera to follow local player
+  // Update camera to follow local player.
+  // `cameraRef` is used instead of `camera` in the dep array to prevent the
+  // effect from re-running every time updateCamera writes a new camera object,
+  // which would cause an infinite update loop.
   useEffect(() => {
     if (!localPlayer || !gameState) return
 
+    const cam = cameraRef.current
     const targetX = localPlayer.position.x
     const targetY = localPlayer.position.y
 
-    // Smooth camera movement
-    const smoothing = camera.smoothing
-    const newX = camera.position.x + (targetX - camera.position.x) * smoothing
-    const newY = camera.position.y + (targetY - camera.position.y) * smoothing
+    const newX = cam.position.x + (targetX - cam.position.x) * cam.smoothing
+    const newY = cam.position.y + (targetY - cam.position.y) * cam.smoothing
 
     updateCamera({
       position: { x: newX, y: newY },
       target: { x: targetX, y: targetY },
     })
-  }, [localPlayer, gameState, camera, updateCamera])
+  }, [localPlayer, gameState, updateCamera])
 
   // Handle game state updates
   useEffect(() => {
-    const unsubscribe = onGameStateUpdate((state) => {
+    const unsubscribe = onGameStateUpdate(state => {
       if (state.status === GameStatus.FINISHED) {
         // Game ended, show game over screen
         setTimeout(() => {
@@ -115,7 +126,7 @@ const GamePage: React.FC = () => {
 
   // Handle game end
   useEffect(() => {
-    const unsubscribe = onGameEnded((data) => {
+    const unsubscribe = onGameEnded(data => {
       console.log('Game ended:', data)
       // Game over screen will be shown via game state
     })
@@ -126,12 +137,14 @@ const GamePage: React.FC = () => {
   const handleSplitAction = () => {
     if (!isGameActive() || !localPlayer) return
     setSplitPressed(true)
+    sendSplit()
     setTimeout(() => setSplitPressed(false), 100)
   }
 
   const handleSpitAction = () => {
     if (!isGameActive() || !localPlayer) return
     setSpitPressed(true)
+    sendSpit()
     setTimeout(() => setSpitPressed(false), 100)
   }
 
@@ -152,7 +165,7 @@ const GamePage: React.FC = () => {
     return (
       <Graphics
         key={player.id}
-        draw={(g) => {
+        draw={g => {
           g.clear()
           g.beginFill(player.color)
           g.drawCircle(0, 0, player.size)
@@ -160,7 +173,7 @@ const GamePage: React.FC = () => {
 
           // Add outline for local player
           if (player.id === localPlayer?.id) {
-            g.lineStyle(3, 0xFFFFFF, 0.8)
+            g.lineStyle(3, 0xffffff, 0.8)
             g.drawCircle(0, 0, player.size + 2)
           }
         }}
@@ -178,12 +191,12 @@ const GamePage: React.FC = () => {
     return (
       <Graphics
         key={knibble.id}
-        draw={(g) => {
+        draw={g => {
           g.clear()
           g.beginFill(knibble.color)
           g.drawCircle(0, 0, knibble.size)
           g.endFill()
-          g.lineStyle(1, 0xFFFFFF, 0.3)
+          g.lineStyle(1, 0xffffff, 0.3)
           g.drawCircle(0, 0, knibble.size)
         }}
         x={screenX}
@@ -200,12 +213,12 @@ const GamePage: React.FC = () => {
     return (
       <Graphics
         key={blob.id}
-        draw={(g) => {
+        draw={g => {
           g.clear()
           g.beginFill(COLORS.SPIT_BLOB)
           g.drawCircle(0, 0, blob.size)
           g.endFill()
-          g.lineStyle(1, 0xFFFFFF, 0.5)
+          g.lineStyle(1, 0xffffff, 0.5)
           g.drawCircle(0, 0, blob.size)
         }}
         x={screenX}
@@ -224,7 +237,7 @@ const GamePage: React.FC = () => {
 
     return (
       <Graphics
-        draw={(g) => {
+        draw={g => {
           g.clear()
           g.lineStyle(4, COLORS.BOUNDARY, 0.8)
           g.drawRect(0, 0, bounds.width, bounds.height)
@@ -252,9 +265,9 @@ const GamePage: React.FC = () => {
       gridLines.push(
         <Graphics
           key={`v-${x}`}
-          draw={(g) => {
+          draw={g => {
             g.clear()
-            g.lineStyle(1, 0xFFFFFF, 0.1)
+            g.lineStyle(1, 0xffffff, 0.1)
             g.moveTo(0, 0)
             g.lineTo(0, dimensions.height)
           }}
@@ -270,9 +283,9 @@ const GamePage: React.FC = () => {
       gridLines.push(
         <Graphics
           key={`h-${y}`}
-          draw={(g) => {
+          draw={g => {
             g.clear()
-            g.lineStyle(1, 0xFFFFFF, 0.1)
+            g.lineStyle(1, 0xffffff, 0.1)
             g.moveTo(0, 0)
             g.lineTo(dimensions.width, 0)
           }}
@@ -287,9 +300,9 @@ const GamePage: React.FC = () => {
 
   if (!gameState || !localPlayer) {
     return (
-      <div className="game-loading">
-        <div className="loading-content">
-          <div className="loading" />
+      <div className='game-loading'>
+        <div className='loading-content'>
+          <div className='loading' />
           <p>Loading game...</p>
         </div>
       </div>
@@ -297,7 +310,7 @@ const GamePage: React.FC = () => {
   }
 
   return (
-    <div className="game-page">
+    <div className='game-page'>
       {/* PIXI.js Stage */}
       <Stage
         width={dimensions.width}
@@ -317,12 +330,10 @@ const GamePage: React.FC = () => {
           {renderBoundaries()}
 
           {/* Knibbles */}
-          {gameState.knibbles &&
-            Object.values(gameState.knibbles).map(renderKnibble)}
+          {gameState.knibbles && Object.values(gameState.knibbles).map(renderKnibble)}
 
           {/* Spit blobs */}
-          {gameState.spitBlobs &&
-            Object.values(gameState.spitBlobs).map(renderSpitBlob)}
+          {gameState.spitBlobs && Object.values(gameState.spitBlobs).map(renderSpitBlob)}
 
           {/* Players */}
           {Object.values(gameState.players)
@@ -332,7 +343,7 @@ const GamePage: React.FC = () => {
       </Stage>
 
       {/* UI Overlay */}
-      <div className="ui-overlay">
+      <div className='ui-overlay'>
         {/* HUD */}
         <GameHUD />
 
@@ -353,9 +364,9 @@ const GamePage: React.FC = () => {
         />
 
         {/* Pause/Menu Button */}
-        <div className="top-controls">
+        <div className='top-controls'>
           <button
-            className="control-button"
+            className='control-button'
             onClick={handlePause}
             style={{ top: '20px', left: '20px' }}
           >
@@ -365,15 +376,15 @@ const GamePage: React.FC = () => {
 
         {/* Pause Menu */}
         {isPaused && (
-          <div className="pause-menu">
-            <div className="pause-content">
+          <div className='pause-menu'>
+            <div className='pause-content'>
               <h2>Game Paused</h2>
-              <div className="pause-buttons">
-                <button className="btn btn-primary" onClick={handlePause}>
+              <div className='pause-buttons'>
+                <button className='btn btn-primary' onClick={handlePause}>
                   <Play size={16} />
                   Resume
                 </button>
-                <button className="btn btn-secondary" onClick={handleLeaveGame}>
+                <button className='btn btn-secondary' onClick={handleLeaveGame}>
                   <Home size={16} />
                   Leave Game
                 </button>
@@ -388,13 +399,13 @@ const GamePage: React.FC = () => {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .game-page {
           width: 100vw;
           height: 100vh;
           position: relative;
           overflow: hidden;
-          background: ${COLORS.BACKGROUND};
+          background: #0F0F23;
         }
 
         .game-loading {
@@ -403,7 +414,7 @@ const GamePage: React.FC = () => {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: ${COLORS.BACKGROUND};
+          background: #0F0F23;
           color: white;
         }
 

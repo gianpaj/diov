@@ -1,95 +1,270 @@
-// Core game types and interfaces
+/**
+ * src/types/game.ts
+ *
+ * Frontend type definitions.
+ *
+ * Wire-format types (anything that crosses the socket) come from the
+ * auto-generated file `src/types/generated.ts`.  Do NOT redefine them here —
+ * if the wire format needs to change, edit `packages/shared/src/schema.ts`
+ * and run codegen.
+ *
+ * This file is the right place for:
+ *   - Frontend-only types (Camera, Viewport, UI state, input, particles, audio)
+ *   - Aliases / re-exports so existing imports continue to work
+ *   - Runtime constants that belong only on the client (GAME_CONSTANTS, COLORS)
+ */
 
-export interface Vector2D {
-  x: number
-  y: number
-}
+// ── Wire-format types (generated) ─────────────────────────────────────────
+//
+// Re-exported so that code importing from '@/types' or '@/types/game' does not
+// need to know about the generated file.
 
-export interface GameBounds {
-  x: number
-  y: number
-  width: number
-  height: number
-}
+export type {
+  PlayerId,
+  RoomId,
+  Vector2D,
+  Boundary,
+  RoomStatusValue,
+  PlayerState,
+  KnibbleState,
+  SpitBlobState,
+  GameState,
+  RoomConfig,
+  PlayerInput,
+  JoinGamePayload,
+  PlayerJoinedPayload,
+  PlayerLeftPayload,
+  GameStartedPayload,
+  GameEndedPayload,
+  GameStats,
+  PlayerEatenPayload,
+  KnibbleSpawnedPayload,
+  ErrorPayload,
+  GameStatusValue,
+} from './generated'
 
-export interface PlayerInput {
-  movement: Vector2D
-  splitPressed: boolean
-  spitPressed: boolean
-}
+// Re-export the RoomStatus and GameStatus const objects so that
+// `RoomStatus.WAITING`, `GameStatus.PLAYING` etc. work as runtime values.
+export { RoomStatus, GameStatus } from './generated'
 
-export interface Player {
-  id: string
-  name: string
-  position: Vector2D
-  velocity: Vector2D
-  size: number
-  color: string
-  isAlive: boolean
-  score: number
-  splitPieces?: PlayerPiece[]
-  lastSplitTime: number
-  lastSpitTime: number
-}
+// ── Frontend Player type ───────────────────────────────────────────────────
+//
+// The frontend `Player` type extends `PlayerState` with client-side-only
+// fields (split pieces, attraction force) that are never sent over the wire.
+// Use `PlayerState` when handling socket payloads; use `Player` when working
+// with local game-loop / rendering state.
+
+import type { PlayerState, Vector2D as Vec2D } from './generated'
 
 export interface PlayerPiece {
   id: string
   parentId: string
-  position: Vector2D
-  velocity: Vector2D
+  position: Vec2D
+  velocity: Vec2D
   size: number
-  attractionForce: Vector2D
+  attractionForce: Vec2D
 }
 
-export interface Knibble {
-  id: string
-  position: Vector2D
-  size: number
-  color: string
-  spawnTime: number
-  value: number
+export interface Player extends PlayerState {
+  /** Client-side split fragments — not part of the wire format. */
+  splitPieces?: PlayerPiece[]
 }
 
-export interface SpitBlob {
-  id: string
-  playerId: string
-  position: Vector2D
-  velocity: Vector2D
-  size: number
-  color: string
-  spawnTime: number
-  despawnTime: number
+// ── Frontend Knibble / SpitBlob extensions ─────────────────────────────────
+//
+// The wire types (`KnibbleState`, `SpitBlobState`) contain all the fields the
+// renderer needs.  These aliases exist so that code using the old names
+// (`Knibble`, `SpitBlob`) continues to compile during the migration.
+
+export type { KnibbleState as Knibble } from './generated'
+export type { SpitBlobState as SpitBlob } from './generated'
+
+// ── GameBounds alias ──────────────────────────────────────────────────────
+// Old name was `GameBounds`; canonical name is now `Boundary`.
+export type { Boundary as GameBounds } from './generated'
+
+// ── PlayerInput alias ─────────────────────────────────────────────────────
+// The wire type is `PlayerInput`; code that used the old `PlayerInput` from
+// this file already matches — no alias needed, it's exported above.
+
+// ── UI state types ────────────────────────────────────────────────────────
+
+export enum ConnectionStatus {
+  DISCONNECTED = 'disconnected',
+  CONNECTING = 'connecting',
+  CONNECTED = 'connected',
+  RECONNECTING = 'reconnecting',
+  ERROR = 'error',
 }
 
-export interface GameState {
-  id: string
-  status: GameStatus
-  players: Record<string, Player>
-  knibbles: Record<string, Knibble>
-  spitBlobs: Record<string, SpitBlob>
-  bounds: GameBounds
+export interface UIState {
+  showHUD: boolean
+  showMenu: boolean
+  showWaitingRoom: boolean
+  showGameOver: boolean
+  isConnected: boolean
+  isJoined: boolean
+  playerName: string
+  connectionStatus: ConnectionStatus
+}
+
+// ── Camera and viewport types ─────────────────────────────────────────────
+
+export interface Camera {
+  position: Vec2D
+  zoom: number
+  target?: Vec2D
+  smoothing: number
+}
+
+export interface Viewport {
+  width: number
+  height: number
+  center: Vec2D
+  bounds: import('./generated').Boundary
+}
+
+// ── Input types ───────────────────────────────────────────────────────────
+
+export interface TouchData {
+  id: number
+  position: Vec2D
+  startPosition: Vec2D
   startTime: number
-  endTime?: number
-  duration: number
-  maxPlayers: number
-  minPlayers: number
-  winner?: string
-  hostId?: string
-  lastUpdate: number
 }
 
-export enum GameStatus {
-  WAITING = 'waiting',
-  STARTING = 'starting',
-  PLAYING = 'playing',
-  ENDING = 'ending',
-  FINISHED = 'finished',
+export interface JoystickState {
+  center: Vec2D
+  knobPosition: Vec2D
+  isActive: boolean
+  direction: Vec2D
+  magnitude: number
 }
+
+// ── Animation and visual effects ──────────────────────────────────────────
+
+export interface ParticleEffect {
+  id: string
+  type: EffectType
+  position: Vec2D
+  velocity: Vec2D
+  size: number
+  color: string
+  lifetime: number
+  startTime: number
+}
+
+export enum EffectType {
+  EAT = 'eat',
+  SPLIT = 'split',
+  SPIT = 'spit',
+  DEATH = 'death',
+  SPAWN = 'spawn',
+}
+
+// ── Audio types ───────────────────────────────────────────────────────────
+
+export interface SoundEffect {
+  id: string
+  src: string
+  volume: number
+  loop: boolean
+}
+
+export interface AudioState {
+  masterVolume: number
+  sfxVolume: number
+  musicVolume: number
+  isMuted: boolean
+}
+
+// ── Socket message envelope types ─────────────────────────────────────────
+//
+// These are frontend-only wrapper types used inside SocketStore.tsx to type
+// the `data` field of each received event.  They are NOT sent over the wire
+// (only the `data` payload is).
+
+import type {
+  GameState,
+  PlayerJoinedPayload,
+  PlayerLeftPayload,
+  GameStartedPayload,
+  GameEndedPayload,
+  PlayerEatenPayload,
+  KnibbleSpawnedPayload,
+  ErrorPayload,
+} from './generated'
+
+export interface SocketMessage {
+  type: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any
+  timestamp: number
+}
+
+export interface GameStateMessage extends SocketMessage {
+  type: 'game_state'
+  data: GameState
+}
+
+export interface PlayerJoinedMessage extends SocketMessage {
+  type: 'player_joined'
+  data: PlayerJoinedPayload
+}
+
+export interface PlayerLeftMessage extends SocketMessage {
+  type: 'player_left'
+  data: PlayerLeftPayload
+}
+
+export interface GameStartedMessage extends SocketMessage {
+  type: 'game_started'
+  data: GameStartedPayload
+}
+
+export interface GameEndedMessage extends SocketMessage {
+  type: 'game_ended'
+  data: GameEndedPayload
+}
+
+export interface PlayerEatenMessage extends SocketMessage {
+  type: 'player_eaten'
+  data: PlayerEatenPayload
+}
+
+export interface KnibbleSpawnedMessage extends SocketMessage {
+  type: 'knibble_spawned'
+  data: KnibbleSpawnedPayload
+}
+
+export interface ErrorMessage extends SocketMessage {
+  type: 'error'
+  data: ErrorPayload
+}
+
+// Legacy message types kept for backward compat during migration
+export interface JoinGameMessage extends SocketMessage {
+  type: 'join_game'
+  data: {
+    playerName: string
+  }
+}
+
+export interface PlayerInputMessage extends SocketMessage {
+  type: 'player_input'
+  data: import('./generated').PlayerInput
+}
+
+// ── Game configuration (frontend-only) ────────────────────────────────────
+//
+// This is local game configuration used by the UI (default values, tuning
+// constants).  It is NOT the same as `RoomConfig` which is the wire-format
+// room config returned by the server.
 
 export interface GameConfig {
   maxPlayers: number
   minPlayers: number
-  gameDuration: number // in milliseconds
+  gameDuration: number // ms
   mapShrinkRate: number
   knibbleSpawnInterval: { min: number; max: number }
   knibbleSize: { min: number; max: number }
@@ -105,185 +280,8 @@ export interface GameConfig {
   attractionForce: number
 }
 
-export interface GameStats {
-  playerId: string
-  rank: number
-  finalSize: number
-  knibblesEaten: number
-  playersEaten: number
-  timeAlive: number
-  maxSize: number
-  splitCount: number
-  spitCount: number
-}
+// ── Game constants ────────────────────────────────────────────────────────
 
-// Socket message types
-export interface SocketMessage {
-  type: string
-  data: any
-  timestamp: number
-}
-
-export interface JoinGameMessage extends SocketMessage {
-  type: 'join_game'
-  data: {
-    playerName: string
-  }
-}
-
-export interface PlayerInputMessage extends SocketMessage {
-  type: 'player_input'
-  data: PlayerInput
-}
-
-export interface GameStateMessage extends SocketMessage {
-  type: 'game_state'
-  data: GameState
-}
-
-export interface PlayerJoinedMessage extends SocketMessage {
-  type: 'player_joined'
-  data: {
-    player: Player
-    playerCount: number
-  }
-}
-
-export interface PlayerLeftMessage extends SocketMessage {
-  type: 'player_left'
-  data: {
-    playerId: string
-    playerCount: number
-  }
-}
-
-export interface GameStartedMessage extends SocketMessage {
-  type: 'game_started'
-  data: {
-    gameState: GameState
-    countdown: number
-  }
-}
-
-export interface GameEndedMessage extends SocketMessage {
-  type: 'game_ended'
-  data: {
-    winner: Player
-    stats: GameStats[]
-    finalState: GameState
-  }
-}
-
-export interface PlayerEatenMessage extends SocketMessage {
-  type: 'player_eaten'
-  data: {
-    eaterId: string
-    victimId: string
-  }
-}
-
-export interface KnibbleSpawnedMessage extends SocketMessage {
-  type: 'knibble_spawned'
-  data: {
-    knibble: Knibble
-  }
-}
-
-export interface ErrorMessage extends SocketMessage {
-  type: 'error'
-  data: {
-    message: string
-    code?: string
-  }
-}
-
-// UI state types
-export interface UIState {
-  showHUD: boolean
-  showMenu: boolean
-  showWaitingRoom: boolean
-  showGameOver: boolean
-  isConnected: boolean
-  isJoined: boolean
-  playerName: string
-  connectionStatus: ConnectionStatus
-}
-
-export enum ConnectionStatus {
-  DISCONNECTED = 'disconnected',
-  CONNECTING = 'connecting',
-  CONNECTED = 'connected',
-  RECONNECTING = 'reconnecting',
-  ERROR = 'error',
-}
-
-// Camera and viewport types
-export interface Camera {
-  position: Vector2D
-  zoom: number
-  target?: Vector2D
-  smoothing: number
-}
-
-export interface Viewport {
-  width: number
-  height: number
-  center: Vector2D
-  bounds: GameBounds
-}
-
-// Input types
-export interface TouchData {
-  id: number
-  position: Vector2D
-  startPosition: Vector2D
-  startTime: number
-}
-
-export interface JoystickState {
-  center: Vector2D
-  knobPosition: Vector2D
-  isActive: boolean
-  direction: Vector2D
-  magnitude: number
-}
-
-// Animation and visual effects types
-export interface ParticleEffect {
-  id: string
-  type: EffectType
-  position: Vector2D
-  velocity: Vector2D
-  size: number
-  color: string
-  lifetime: number
-  startTime: number
-}
-
-export enum EffectType {
-  EAT = 'eat',
-  SPLIT = 'split',
-  SPIT = 'spit',
-  DEATH = 'death',
-  SPAWN = 'spawn',
-}
-
-// Audio types
-export interface SoundEffect {
-  id: string
-  src: string
-  volume: number
-  loop: boolean
-}
-
-export interface AudioState {
-  masterVolume: number
-  sfxVolume: number
-  musicVolume: number
-  isMuted: boolean
-}
-
-// Game constants
 export const GAME_CONSTANTS = {
   CANVAS_WIDTH: 1920,
   CANVAS_HEIGHT: 1080,
@@ -301,7 +299,8 @@ export const GAME_CONSTANTS = {
   PARTICLE_LIFETIME: 2000, // ms
 } as const
 
-// Color constants
+// ── Color constants ───────────────────────────────────────────────────────
+
 export const COLORS = {
   PLAYER_COLORS: [
     '#FF6B6B', // Red

@@ -1,4 +1,18 @@
 import React, { createContext, useContext, ReactNode, useEffect, useRef } from 'react'
+import {
+  JOIN_GAME,
+  START_GAME,
+  LEAVE_GAME,
+  PLAYER_INPUT,
+  GAME_STATE,
+  PLAYER_JOINED,
+  PLAYER_LEFT,
+  GAME_STARTED,
+  GAME_ENDED,
+  PLAYER_EATEN,
+  KNIBBLE_SPAWNED,
+  ERROR,
+} from '@battle-circles/shared/events'
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import { io, Socket } from 'socket.io-client'
@@ -17,20 +31,6 @@ import {
   type ErrorMessage,
   type PlayerInput,
 } from '@/types'
-
-// ── Event name constants (kept in sync with backend/src/game/events.ts) ────
-const EV_JOIN_GAME = 'join_game'
-const EV_START_GAME = 'start_game'
-const EV_LEAVE_GAME = 'leave_game'
-const EV_PLAYER_INPUT = 'player_input'
-const EV_GAME_STATE = 'game_state'
-const EV_PLAYER_JOINED = 'player_joined'
-const EV_PLAYER_LEFT = 'player_left'
-const EV_GAME_STARTED = 'game_started'
-const EV_GAME_ENDED = 'game_ended'
-const EV_PLAYER_EATEN = 'player_eaten'
-const EV_KNIBBLE_SPAWNED = 'knibble_spawned'
-const EV_ERROR = 'error'
 
 // For MVP all players land in the same room — matches DEFAULT_ROOM_ID in socket.ts
 const DEFAULT_ROOM_ID = 'global'
@@ -65,6 +65,8 @@ interface SocketStore {
   leaveGame: () => void
   startGame: () => void
   sendPlayerInput: (input: PlayerInput) => void
+  sendSplit: () => void
+  sendSpit: () => void
   sendMessage: (message: SocketMessage) => void
 
   // Event Handlers (each returns an unsubscribe function)
@@ -207,24 +209,24 @@ export const useSocketStore = create<SocketStore>()(
       // Send roomId so the backend can route to the correct room.
       // For MVP this is always 'global'; matchmaking can change it later.
       const message: JoinGameMessage = {
-        type: EV_JOIN_GAME,
+        type: JOIN_GAME,
         data: { playerName },
         timestamp: Date.now(),
       }
 
-      socket.emit(EV_JOIN_GAME, { playerName: message.data.playerName, roomId: DEFAULT_ROOM_ID })
+      socket.emit(JOIN_GAME, { playerName: message.data.playerName, roomId: DEFAULT_ROOM_ID })
     },
 
     startGame: () => {
       const { socket, isConnected } = get()
       if (!socket || !isConnected) return
-      socket.emit(EV_START_GAME)
+      socket.emit(START_GAME)
     },
 
     leaveGame: () => {
       const { socket, isConnected } = get()
       if (!socket || !isConnected) return
-      socket.emit(EV_LEAVE_GAME)
+      socket.emit(LEAVE_GAME)
     },
 
     sendPlayerInput: (input: PlayerInput) => {
@@ -232,13 +234,25 @@ export const useSocketStore = create<SocketStore>()(
       if (!socket || !isConnected) return
 
       const message: PlayerInputMessage = {
-        type: EV_PLAYER_INPUT,
+        type: PLAYER_INPUT,
         data: input,
         timestamp: Date.now(),
       }
 
       // Emit using the constant so it always matches the backend handler
-      socket.emit(EV_PLAYER_INPUT, message.data)
+      socket.emit(PLAYER_INPUT, message.data)
+    },
+
+    sendSplit: () => {
+      const { socket, isConnected } = get()
+      if (!socket || !isConnected) return
+      socket.emit('split')
+    },
+
+    sendSpit: () => {
+      const { socket, isConnected } = get()
+      if (!socket || !isConnected) return
+      socket.emit('spit')
     },
 
     sendMessage: (message: SocketMessage) => {
@@ -256,64 +270,64 @@ export const useSocketStore = create<SocketStore>()(
       const { socket } = get()
       if (!socket) return () => {}
       const handler = (data: GameState) => callback(data)
-      socket.on(EV_GAME_STATE, handler)
-      return () => socket.off(EV_GAME_STATE, handler)
+      socket.on(GAME_STATE, handler)
+      return () => socket.off(GAME_STATE, handler)
     },
 
     onPlayerJoined: (callback: (data: PlayerJoinedMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
       const handler = (data: PlayerJoinedMessage['data']) => callback(data)
-      socket.on(EV_PLAYER_JOINED, handler)
-      return () => socket.off(EV_PLAYER_JOINED, handler)
+      socket.on(PLAYER_JOINED, handler)
+      return () => socket.off(PLAYER_JOINED, handler)
     },
 
     onPlayerLeft: (callback: (data: PlayerLeftMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
       const handler = (data: PlayerLeftMessage['data']) => callback(data)
-      socket.on(EV_PLAYER_LEFT, handler)
-      return () => socket.off(EV_PLAYER_LEFT, handler)
+      socket.on(PLAYER_LEFT, handler)
+      return () => socket.off(PLAYER_LEFT, handler)
     },
 
     onGameStarted: (callback: (data: GameStartedMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
       const handler = (data: GameStartedMessage['data']) => callback(data)
-      socket.on(EV_GAME_STARTED, handler)
-      return () => socket.off(EV_GAME_STARTED, handler)
+      socket.on(GAME_STARTED, handler)
+      return () => socket.off(GAME_STARTED, handler)
     },
 
     onGameEnded: (callback: (data: GameEndedMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
       const handler = (data: GameEndedMessage['data']) => callback(data)
-      socket.on(EV_GAME_ENDED, handler)
-      return () => socket.off(EV_GAME_ENDED, handler)
+      socket.on(GAME_ENDED, handler)
+      return () => socket.off(GAME_ENDED, handler)
     },
 
     onPlayerEaten: (callback: (data: PlayerEatenMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
       const handler = (data: PlayerEatenMessage['data']) => callback(data)
-      socket.on(EV_PLAYER_EATEN, handler)
-      return () => socket.off(EV_PLAYER_EATEN, handler)
+      socket.on(PLAYER_EATEN, handler)
+      return () => socket.off(PLAYER_EATEN, handler)
     },
 
     onKnibbleSpawned: (callback: (data: KnibbleSpawnedMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
       const handler = (data: KnibbleSpawnedMessage['data']) => callback(data)
-      socket.on(EV_KNIBBLE_SPAWNED, handler)
-      return () => socket.off(EV_KNIBBLE_SPAWNED, handler)
+      socket.on(KNIBBLE_SPAWNED, handler)
+      return () => socket.off(KNIBBLE_SPAWNED, handler)
     },
 
     onError: (callback: (data: ErrorMessage['data']) => void) => {
       const { socket } = get()
       if (!socket) return () => {}
       const handler = (data: ErrorMessage['data']) => callback(data)
-      socket.on(EV_ERROR, handler)
-      return () => socket.off(EV_ERROR, handler)
+      socket.on(ERROR, handler)
+      return () => socket.off(ERROR, handler)
     },
 
     // ── Internal Actions ───────────────────────────────────────────────────

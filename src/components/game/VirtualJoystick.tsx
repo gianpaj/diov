@@ -19,25 +19,28 @@ const VirtualJoystick = forwardRef<HTMLDivElement, VirtualJoystickProps>(
     }
 
     return (
-      <div className="joystick-container" ref={ref}>
+      <div className='joystick-container' ref={ref}>
         <div
-          className="joystick-area"
+          className='joystick-area'
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
           onMouseDown={onMouseDown}
         >
-          <div className="joystick-base">
+          {/* Glow ring — opacity driven by isActive via inline style */}
+          <div className='joystick-glow' style={{ opacity: isActive ? 1 : 0 }} />
+          <div className='joystick-base'>
             <div
-              className={`joystick-knob ${isActive ? 'active' : ''}`}
+              className={`joystick-knob ${isActive ? 'active' : ''} ${magnitude > 0.8 ? 'pulsing' : ''}`}
               style={{
                 transform: `translate(${knobOffset.x}px, ${knobOffset.y}px)`,
+                transition: isActive ? 'none' : 'transform 0.2s ease-out',
               }}
             />
           </div>
         </div>
 
-        <style jsx>{`
+        <style>{`
           .joystick-container {
             position: absolute;
             left: 20px;
@@ -56,6 +59,26 @@ const VirtualJoystick = forwardRef<HTMLDivElement, VirtualJoystickProps>(
             justify-content: center;
             touch-action: none;
             user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
+            position: relative;
+          }
+
+          /* Glow ring rendered as a sibling div so opacity can be set via inline style */
+          .joystick-glow {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            right: -5px;
+            bottom: -5px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.3), transparent);
+            transition: opacity 0.2s ease;
+            z-index: -1;
+            pointer-events: none;
           }
 
           .joystick-base {
@@ -72,13 +95,16 @@ const VirtualJoystick = forwardRef<HTMLDivElement, VirtualJoystickProps>(
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
           }
 
+          .joystick-base:active {
+            transform: scale(0.98);
+          }
+
           .joystick-knob {
             width: 45px;
             height: 45px;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.9);
             position: absolute;
-            transition: ${isActive ? 'none' : 'transform 0.2s ease-out'};
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
             border: 2px solid rgba(255, 255, 255, 0.5);
           }
@@ -105,6 +131,16 @@ const VirtualJoystick = forwardRef<HTMLDivElement, VirtualJoystickProps>(
             background: rgba(102, 126, 234, 0.3);
           }
 
+          /* Pulse animation when magnitude > 0.8 — toggled via .pulsing class */
+          .joystick-knob.pulsing {
+            animation: joystick-pulse 0.5s ease-in-out infinite alternate;
+          }
+
+          @keyframes joystick-pulse {
+            from { scale: 1; }
+            to   { scale: 1.1; }
+          }
+
           @media (max-width: 768px) {
             .joystick-container {
               width: 100px;
@@ -128,56 +164,6 @@ const VirtualJoystick = forwardRef<HTMLDivElement, VirtualJoystickProps>(
               height: 15px;
             }
           }
-
-          /* Prevent text selection and context menu */
-          .joystick-area {
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-            -webkit-touch-callout: none;
-            -webkit-tap-highlight-color: transparent;
-          }
-
-          /* Add visual feedback for touch */
-          .joystick-base:active {
-            transform: scale(0.98);
-          }
-
-          /* Glow effect when active */
-          .joystick-base {
-            position: relative;
-          }
-
-          .joystick-base::before {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: -5px;
-            right: -5px;
-            bottom: -5px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.3), transparent);
-            opacity: ${isActive ? '1' : '0'};
-            transition: opacity 0.2s ease;
-            z-index: -1;
-          }
-
-          /* Pulse animation when magnitude is high */
-          ${magnitude > 0.8 ? `
-            .joystick-knob {
-              animation: pulse 0.5s ease-in-out infinite alternate;
-            }
-
-            @keyframes pulse {
-              from {
-                transform: translate(${knobOffset.x}px, ${knobOffset.y}px) scale(1);
-              }
-              to {
-                transform: translate(${knobOffset.x}px, ${knobOffset.y}px) scale(1.1);
-              }
-            }
-          ` : ''}
         `}</style>
       </div>
     )

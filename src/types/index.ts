@@ -1,27 +1,66 @@
 // Main type definitions export file
-export * from './game'
 
-// Re-export commonly used types for convenience
-export { GameStatus, ConnectionStatus, EffectType } from './game'
+// ── Wire-format types from generated file ──────────────────────────────────
+// These are the canonical types shared with the backend.
+// Do NOT add wire types here — edit packages/shared/src/schema.ts instead.
+
 export type {
+  PlayerId,
+  RoomId,
   Vector2D,
-  Player,
+  Boundary,
+  RoomStatusValue,
+  PlayerState,
+  KnibbleState,
+  SpitBlobState,
   GameState,
+  RoomConfig,
   PlayerInput,
-  Knibble,
-  SpitBlob,
-  GameBounds,
+  JoinGamePayload,
+  PlayerJoinedPayload,
+  PlayerLeftPayload,
+  GameStartedPayload,
+  GameEndedPayload,
+  GameStats,
+  PlayerEatenPayload,
+  KnibbleSpawnedPayload,
+  ErrorPayload,
+  GameStatusValue,
+} from './generated'
+
+// Re-export const objects as values (not type-only) so that
+// `GameStatus.PLAYING`, `RoomStatus.WAITING` etc. work at runtime.
+export { GameStatus, RoomStatus } from './generated'
+
+// ── Frontend-only types from game.ts ──────────────────────────────────────
+export { ConnectionStatus, EffectType } from './game'
+
+export type {
+  // Aliases kept for backward compat
+  Boundary as GameBounds,
+  KnibbleState as Knibble,
+  SpitBlobState as SpitBlob,
+
+  // Frontend-only extensions
+  Player,
+  PlayerPiece,
+
+  // UI / input / rendering
   UIState,
   Camera,
   Viewport,
-  JoystickState,
   TouchData,
+  JoystickState,
   ParticleEffect,
   AudioState,
   SoundEffect,
   GameConfig,
-  GameStats,
+
+  // Socket message envelope types (frontend-only wrappers)
   SocketMessage,
+  PlayerInputMessage,
+  JoinGameMessage,
+  GameStateMessage,
   PlayerJoinedMessage,
   PlayerLeftMessage,
   GameStartedMessage,
@@ -31,5 +70,5 @@ export type {
   ErrorMessage,
 } from './game'
 
-// Export constants
+// ── Runtime constants ──────────────────────────────────────────────────────
 export { GAME_CONSTANTS, COLORS } from './game'

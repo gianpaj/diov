@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import path from 'path'
 
@@ -7,10 +8,11 @@ import path from 'path'
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
       },
       manifest: {
         name: 'Battle Circles',
@@ -24,16 +26,16 @@ export default defineConfig({
           {
             src: 'icon-192x192.png',
             sizes: '192x192',
-            type: 'image/png'
+            type: 'image/png',
           },
           {
             src: 'icon-512x512.png',
             sizes: '512x512',
-            type: 'image/png'
-          }
-        ]
-      }
-    })
+            type: 'image/png',
+          },
+        ],
+      },
+    }),
   ],
   resolve: {
     alias: {
@@ -44,18 +46,28 @@ export default defineConfig({
       '@/utils': path.resolve(__dirname, './src/utils'),
       '@/stores': path.resolve(__dirname, './src/stores'),
       '@/types': path.resolve(__dirname, './src/types'),
-      '@/assets': path.resolve(__dirname, './src/assets')
-    }
+      '@/assets': path.resolve(__dirname, './src/assets'),
+      // Shared package — lets the frontend import from @battle-circles/shared
+      // without needing the pnpm workspace to be fully installed.
+      // Maps sub-path exports too: /events, /schema, /validators
+      '@battle-circles/shared/events': path.resolve(__dirname, './packages/shared/src/events.ts'),
+      '@battle-circles/shared/schema': path.resolve(__dirname, './packages/shared/src/schema.ts'),
+      '@battle-circles/shared/validators': path.resolve(
+        __dirname,
+        './packages/shared/src/validators.ts'
+      ),
+      '@battle-circles/shared': path.resolve(__dirname, './packages/shared/src/index.ts'),
+    },
   },
   server: {
     port: 3000,
-    host: true
+    host: true,
   },
   build: {
     target: 'esnext',
-    sourcemap: true
+    sourcemap: true,
   },
   optimizeDeps: {
-    include: ['pixi.js', '@pixi/react']
-  }
+    include: ['pixi.js', '@pixi/react'],
+  },
 })

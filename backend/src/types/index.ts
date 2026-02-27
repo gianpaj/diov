@@ -1,158 +1,60 @@
 /**
  * backend/src/types/index.ts
  *
- * Canonical type definitions for the game wire format.
+ * All wire-format types now come from the generated file produced by the
+ * codegen script in packages/shared.  Do NOT add new hand-written types here.
  *
- * These types define the shape of data sent over the socket.  The frontend
- * (`src/types/game.ts`) must stay in sync with these.  When changing a type
- * here, update the frontend counterpart too.
+ * To change a type:
+ *   1. Edit packages/shared/src/schema.ts
+ *   2. Run: pnpm --filter @battle-circles/shared codegen
+ *   3. Commit packages/shared/src/schema.ts AND backend/src/types/generated.ts
+ *      AND src/types/generated.ts together.
+ *
+ * To add a backend-only type (not part of the wire format — e.g. an internal
+ * engine structure) add it below the re-export block with a clear comment.
  */
 
-export type PlayerId = string
-export type RoomId = string
+// ── Value re-exports (const objects usable at runtime) ────────────────────
+//
+// `RoomStatus` is both a const object and a type alias in generated.ts.
+// A plain `export { ... }` covers both the value and type sides.
 
-// ── Room status ────────────────────────────────────────────────────────────
+export { RoomStatus } from './generated.ts'
 
-export const RoomStatus = {
-  WAITING: 'waiting',
-  STARTING: 'starting',
-  PLAYING: 'playing',
-  FINISHED: 'finished',
-} as const
+// ── Type-only re-exports ──────────────────────────────────────────────────
+//
+// Everything that is a pure type (interface / type alias) and has no runtime
+// representation goes here.  Keeping value and type exports separate avoids
+// the "exported using export type" TS1362 error when code uses these as
+// runtime values.
 
-export type RoomStatusValue = (typeof RoomStatus)[keyof typeof RoomStatus]
+export type {
+  PlayerId,
+  RoomId,
+  Vector2D,
+  Boundary,
+  RoomStatusValue,
+  PlayerState,
+  KnibbleState,
+  SpitBlobState,
+  GameState,
+  RoomConfig,
+  PlayerInput,
+  JoinGamePayload,
+  PlayerJoinedPayload,
+  PlayerLeftPayload,
+  GameStartedPayload,
+  GameEndedPayload,
+  GameStats,
+  PlayerEatenPayload,
+  KnibbleSpawnedPayload,
+  ErrorPayload,
+} from './generated.ts'
 
-// ── Shared sub-types ───────────────────────────────────────────────────────
+// ── Backward-compat aliases ───────────────────────────────────────────────
+//
+// The old hand-written types/index.ts exported these names.  Code that
+// imports them continues to compile without a bulk rename.
 
-/** 2-D coordinate used for positions and velocities. */
-export interface Vector2D {
-  x: number
-  y: number
-}
-
-/**
- * Player state that is broadcast to every client each tick.
- *
- * Uses `position` + `size` to match the frontend `Player` shape.
- */
-export interface PlayerState {
-  id: PlayerId
-  name: string
-  position: Vector2D // world coordinates (pixels)
-  velocity: Vector2D // pixels per tick
-  size: number // radius
-  color: string // e.g. "rgb(255,0,128)" or "#FF6B6B"
-  isAlive: boolean
-  score: number
-  lastSplitTime: number
-  lastSpitTime: number
-}
-
-/** Food pellet broadcast to clients. */
-export interface KnibbleState {
-  id: string
-  position: Vector2D
-  size: number // radius
-  color: string
-}
-
-/** Ejected mass blob. */
-export interface SpitBlobState {
-  id: string
-  playerId: PlayerId
-  position: Vector2D
-  velocity: Vector2D
-  size: number
-  color: string
-  spawnTime: number
-  despawnTime: number
-}
-
-/** Axis-aligned boundary of the playable area. */
-export interface Boundary {
-  x: number // left edge
-  y: number // top edge
-  width: number
-  height: number
-}
-
-// ── Top-level GameState (wire format) ─────────────────────────────────────
-
-/**
- * Full game snapshot sent by `room.broadcast()` on every tick and on join.
- *
- * `players`, `knibbles`, and `spitBlobs` are keyed by id for O(1) lookup on
- * the frontend.
- */
-export interface GameState {
-  /** Unique game/room id. */
-  id: string
-  status: RoomStatusValue
-  /** ms since epoch at which the match started (undefined while WAITING). */
-  startTime: number
-  /** ms since epoch at which the match ended (undefined while active). */
-  endTime?: number
-  /** Nominal round length in ms (used by the client countdown). */
-  duration: number
-  maxPlayers: number
-  minPlayers: number
-  /** Socket id of the player who created the room. */
-  hostId: string
-  /** Socket id of the winner, set when status becomes FINISHED. */
-  winner?: string
-  /** ms timestamp of this snapshot. */
-  lastUpdate: number
-
-  players: Record<PlayerId, PlayerState>
-  knibbles: Record<string, KnibbleState>
-  spitBlobs: Record<string, SpitBlobState>
-  bounds: Boundary
-}
-
-// ── Room configuration ─────────────────────────────────────────────────────
-
-export interface RoomConfig {
-  id: RoomId
-  maxPlayers: number // 2-12
-  tickRate: number // ms per update, e.g. 50 ms (= 20 TPS)
-}
-
-// ── Socket message payloads ────────────────────────────────────────────────
-
-/** Sent by the client when it wants to move. */
-export interface PlayerInputPayload {
-  movement: Vector2D // normalised dx/dy in [-1, 1]
-  splitPressed: boolean
-  spitPressed: boolean
-}
-
-/** Sent by the client on join_game. */
-export interface JoinGamePayload {
-  playerName: string
-  roomId: string
-}
-
-/** Emitted to all players when someone joins. */
-export interface PlayerJoinedPayload {
-  player: PlayerState
-  playerCount: number
-}
-
-/** Emitted to all players when someone leaves or disconnects. */
-export interface PlayerLeftPayload {
-  playerId: PlayerId
-  playerCount: number
-}
-
-/** Emitted to all players when the countdown begins. */
-export interface GameStartedPayload {
-  gameState: GameState
-  /** Countdown length in seconds. */
-  countdown: number
-}
-
-/** Emitted to all players when the game is over. */
-export interface GameEndedPayload {
-  winner: PlayerState | null
-  finalState: GameState
-}
+export type { PlayerInput as PlayerInputPayload } from './generated.ts'
+export type { RoomStatusValue as RoomStatusValueAlias } from './generated.ts'

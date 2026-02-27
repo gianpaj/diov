@@ -4,15 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "dev": "nodemon --exec tsx src/server.ts",
-    "start": "node src/server.ts"
+    "start": "node src/server.ts",
+    "type-check": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@battle-circles/shared": "workspace:*",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
@@ -21,5 +24,12 @@
     "tsx": "^4.21.0",
     "uuid": "^13.0.0",
     "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.0.0",
+    "socket.io-client": "^4.8.3",
+    "typescript": "^5.2.2",
+    "vitest": "^1.6.0"
   }
 }

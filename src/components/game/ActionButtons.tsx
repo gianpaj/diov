@@ -9,12 +9,12 @@ interface ActionButtonsProps {
 
 const ActionButtons: React.FC<ActionButtonsProps> = ({ onSplit, onSpit, disabled = false }) => {
   return (
-    <div className="action-buttons">
+    <div className='action-buttons'>
       <button
         className={`action-button split-button ${disabled ? 'disabled' : ''}`}
         onClick={onSplit}
         disabled={disabled}
-        type="button"
+        type='button'
       >
         <Zap size={24} />
       </button>
@@ -23,12 +23,12 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ onSplit, onSpit, disabled
         className={`action-button spit-button ${disabled ? 'disabled' : ''}`}
         onClick={onSpit}
         disabled={disabled}
-        type="button"
+        type='button'
       >
         <Droplet size={24} />
       </button>
 
-      <style jsx>{`
+      <style>{`
         .action-buttons {
           position: absolute;
           right: 20px;

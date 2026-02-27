@@ -1,4 +1,5 @@
 import React, { createContext, useContext, ReactNode, useEffect, useRef } from 'react'
+import { useGameStore } from '@/stores/GameStore'
 import {
   JOIN_GAME,
   START_GAME,
@@ -44,6 +45,7 @@ const PING_INTERVAL = 5000
 interface SocketStore {
   // Connection State
   socket: Socket | null
+  socketId: string | null
   isConnected: boolean
   connectionStatus: ConnectionStatus
   reconnectAttempts: number
@@ -92,6 +94,7 @@ export const useSocketStore = create<SocketStore>()(
   subscribeWithSelector((set, get) => ({
     // ── Initial State ──────────────────────────────────────────────────────
     socket: null,
+    socketId: null,
     isConnected: false,
     connectionStatus: ConnectionStatus.DISCONNECTED,
     reconnectAttempts: 0,
@@ -125,6 +128,7 @@ export const useSocketStore = create<SocketStore>()(
         console.log('Socket connected:', newSocket.id)
         set({
           socket: newSocket,
+          socketId: newSocket.id ?? null,
           isConnected: true,
           connectionStatus: ConnectionStatus.CONNECTED,
         })
@@ -136,6 +140,7 @@ export const useSocketStore = create<SocketStore>()(
         console.log('Socket disconnected:', reason)
         get().stopPingMonitoring()
         set({
+          socketId: null,
           isConnected: false,
           connectionStatus: ConnectionStatus.DISCONNECTED,
         })
@@ -158,6 +163,14 @@ export const useSocketStore = create<SocketStore>()(
         get().updateLatency(latency)
       })
 
+      // Persist every game_state directly into GameStore the moment it
+      // arrives — regardless of whether any component has mounted and
+      // registered its own onGameStateUpdate listener yet.
+      // This is the single source of truth for game state on the frontend.
+      newSocket.on(GAME_STATE, (state: GameState) => {
+        useGameStore.getState().setGameState(state)
+      })
+
       set({ socket: newSocket })
     },
 
@@ -168,6 +181,7 @@ export const useSocketStore = create<SocketStore>()(
         socket.disconnect()
         set({
           socket: null,
+          socketId: null,
           isConnected: false,
           connectionStatus: ConnectionStatus.DISCONNECTED,
         })

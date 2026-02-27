@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Users, Clock, Target, Zap } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { useGameStore } from '@/stores/GameStore'
@@ -6,18 +6,37 @@ import { useSocketStore } from '@/stores/SocketStore'
 import { GameStatus } from '@/types'
 
 const GameHUD: React.FC = () => {
-  const { gameState, localPlayer, gameConfig } = useGameStore()
+  const { gameState, localPlayer } = useGameStore()
 
   const { latency } = useSocketStore()
 
   if (!gameState || !localPlayer) return null
 
-  // Calculate time remaining
-  const timeRemaining = () => {
+  // Calculate time remaining — uses gameState.duration (from server) not the
+  // frontend default config, because gameConfig.gameDuration is a static default
+  // that doesn't reflect what the server actually sent.
+  const calcTimeRemaining = () => {
     if (gameState.status !== GameStatus.PLAYING) return 0
     const elapsed = Date.now() - gameState.startTime
-    return Math.max(0, gameConfig.gameDuration - elapsed)
+    return Math.max(0, gameState.duration - elapsed)
   }
+
+  // Local tick so the clock updates every second without waiting for a server frame.
+  const [timeLeft, setTimeLeft] = useState(calcTimeRemaining)
+
+  useEffect(() => {
+    // Re-sync immediately whenever the game state changes (new server frame).
+    setTimeLeft(calcTimeRemaining())
+
+    if (gameState.status !== GameStatus.PLAYING) return
+
+    const id = setInterval(() => {
+      setTimeLeft(calcTimeRemaining())
+    }, 500) // 500 ms for smooth updates without drift
+
+    return () => clearInterval(id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState.status, gameState.startTime, gameState.duration])
 
   // Format time as MM:SS
   const formatTime = (milliseconds: number) => {
@@ -53,7 +72,7 @@ const GameHUD: React.FC = () => {
         <div
           className={cn(
             'hud-item time flex items-center gap-1.5 text-white text-sm font-semibold whitespace-nowrap',
-            isTimeRunningOut && 'text-[--color-accent-red] animate-pulse'
+            isTimeRunningOut && 'text-accent-red animate-pulse'
           )}
           style={
             {
@@ -65,7 +84,7 @@ const GameHUD: React.FC = () => {
           <span
             className={cn(
               'font-bold [text-shadow:0_1px_2px_rgba(0,0,0,0.5)] transition-colors duration-200 font-mono text-base',
-              isTimeRunningOut && 'text-[--color-accent-red]'
+              isTimeRunningOut && 'text-accent-red'
             )}
           >
             {formatTime(timeLeft)}
@@ -75,7 +94,7 @@ const GameHUD: React.FC = () => {
         {/* Player count */}
         <div className='flex items-center gap-1.5 text-white text-sm font-semibold whitespace-nowrap'>
           <Users size={18} />
-          <span className='font-bold [text-shadow:0_1px_2px_rgba(0,0,0,0.5)] transition-colors duration-200 text-[--color-accent-yellow]'>
+          <span className='font-bold [text-shadow:0_1px_2px_rgba(0,0,0,0.5)] transition-colors duration-200 text-accent-yellow'>
             {aliveCount}
           </span>
         </div>
@@ -83,7 +102,7 @@ const GameHUD: React.FC = () => {
         {/* Player rank */}
         <div className='flex items-center gap-1.5 text-white text-sm font-semibold whitespace-nowrap'>
           <Target size={18} />
-          <span className='font-bold [text-shadow:0_1px_2px_rgba(0,0,0,0.5)] transition-colors duration-200 text-[--color-accent-teal]'>
+          <span className='font-bold [text-shadow:0_1px_2px_rgba(0,0,0,0.5)] transition-colors duration-200 text-accent-teal'>
             #{playerRank}
           </span>
         </div>
@@ -108,14 +127,14 @@ const GameHUD: React.FC = () => {
           <div
             className={cn(
               'flex items-center gap-1.5 text-white font-semibold whitespace-nowrap text-xs opacity-80',
-              latency > 200 && 'text-[--color-accent-red] animate-pulse'
+              latency > 200 && 'text-accent-red animate-pulse'
             )}
           >
             <Zap size={16} />
             <span
               className={cn(
                 'font-bold [text-shadow:0_1px_2px_rgba(0,0,0,0.5)] transition-colors duration-200',
-                latency > 200 && 'text-[--color-accent-red]'
+                latency > 200 && 'text-accent-red'
               )}
             >
               {latency}ms

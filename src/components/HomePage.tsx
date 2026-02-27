@@ -154,26 +154,24 @@ const HomePage: React.FC = () => {
 
   return (
     <div className='w-screen h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#16213e_35%,#0f0f23_100%)]'>
-      <div className='animate-[fadeIn_0.5s_ease-out] relative bg-black/80 rounded-[--radius-card] p-10 backdrop-blur-[20px] border border-white/10 min-w-[400px] text-center'>
+      <div className='animate-[fadeIn_0.5s_ease-out] relative bg-black/80 rounded-card p-10 backdrop-blur-[20px] border border-white/10 min-w-100 text-center'>
         <div className='game-logo'>
           {joinError && (
             <div
-              className='mb-4 px-4 py-2.5 rounded-xl bg-[rgba(255,107,107,0.15)] border border-[rgba(255,107,107,0.5)] text-[--color-accent-red] text-sm text-center'
+              className='mb-4 px-4 py-2.5 rounded-xl bg-[rgba(255,107,107,0.15)] border border-[rgba(255,107,107,0.5)] text-accent-red text-sm text-center'
               role='alert'
             >
               {joinError}
             </div>
           )}
           <h1>Battle Circles</h1>
-          <p className='text-[1.2em] text-white/80 text-center mb-[30px]'>
+          <p className='text-[1.2em] text-white/80 text-center mb-7.5'>
             Eat or be eaten in this multiplayer battle arena!
           </p>
         </div>
 
         <div className='mb-5'>
-          <div
-            className='flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm'
-          >
+          <div className='flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm'>
             <div
               className='w-2 h-2 rounded-full shrink-0'
               style={{ backgroundColor: getConnectionStatusColor() }}
@@ -191,8 +189,8 @@ const HomePage: React.FC = () => {
               placeholder='Enter your name'
               maxLength={20}
               disabled={isJoining}
-              className='w-full px-5 py-[15px] rounded-[25px] border-2 border-white/30 bg-white/10 text-white text-base outline-none mb-5 backdrop-blur-[10px] text-center focus:border-white/60 focus:shadow-[0_0_0_2px_rgba(102,126,234,0.3)] placeholder:text-white/50'
-              onKeyPress={e => {
+              className='w-full px-5 py-3.75 rounded-btn border-2 border-white/30 bg-white/10 text-white text-base outline-none mb-5 backdrop-blur-[10px] text-center focus:border-white/60 focus:shadow-[0_0_0_2px_rgba(102,126,234,0.3)] placeholder:text-white/50'
+              onKeyDown={e => {
                 if (e.key === 'Enter' && !isJoining) {
                   handleJoinGame()
                 }
@@ -201,7 +199,7 @@ const HomePage: React.FC = () => {
           </div>
 
           <button
-            className='btn btn-primary w-full text-[18px] px-[30px] py-[15px] mb-5'
+            className='btn btn-primary w-full text-[18px] px-7.5 py-3.75 mb-5'
             onClick={handleJoinGame}
             disabled={isJoining || !playerName.trim()}
           >
@@ -220,15 +218,15 @@ const HomePage: React.FC = () => {
         </div>
 
         <div className='game-info'>
-          <div className='grid grid-cols-2 gap-5 mb-[30px]'>
-            <div className='flex items-center gap-[15px] p-[15px] bg-white/5 rounded-[15px] border border-white/10'>
+          <div className='grid grid-cols-2 gap-5 mb-7.5'>
+            <div className='flex items-center gap-3.75 p-3.75 bg-white/5 rounded-3.75 border border-white/10'>
               <Users size={24} />
               <div>
                 <h3 className='m-0 text-[1.1em] text-white'>5-12 Players</h3>
                 <p className='m-0 text-[0.9em] text-white/70'>Multiplayer battles</p>
               </div>
             </div>
-            <div className='flex items-center gap-[15px] p-[15px] bg-white/5 rounded-[15px] border border-white/10'>
+            <div className='flex items-center gap-3.75 p-3.75 bg-white/5 rounded-3.75 border border-white/10'>
               <Settings size={24} />
               <div>
                 <h3 className='m-0 text-[1.1em] text-white'>5 Minutes</h3>
@@ -238,13 +236,15 @@ const HomePage: React.FC = () => {
           </div>
         </div>
 
-        <div className='bg-white/5 rounded-[15px] p-5 border border-white/10'>
-          <h3 className='flex items-center gap-2.5 mb-[15px] text-white text-[1.2em]'>
+        <div className='bg-white/5 rounded-3.75 p-5 border border-white/10'>
+          <h3 className='flex items-center gap-2.5 mb-3.75 text-white text-[1.2em]'>
             <Info size={20} />
             How to Play
           </h3>
           <ul className='list-none p-0 m-0 text-left'>
-            <li className='py-1 text-white/80 text-[0.95em]'>• Move with the joystick on the left</li>
+            <li className='py-1 text-white/80 text-[0.95em]'>
+              • Move with the joystick on the left
+            </li>
             <li className='py-1 text-white/80 text-[0.95em]'>• Eat smaller players to grow</li>
             <li className='py-1 text-white/80 text-[0.95em]'>• Split to move faster or escape</li>
             <li className='py-1 text-white/80 text-[0.95em]'>• Spit to lose size and gain speed</li>

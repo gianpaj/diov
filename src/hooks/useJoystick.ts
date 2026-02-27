@@ -25,7 +25,7 @@ export function useJoystick(options: UseJoystickOptions = {}) {
   })
 
   const touchRef = useRef<TouchData | null>(null)
-  const animationFrameRef = useRef<number>()
+  const animationFrameRef = useRef<number | undefined>(undefined)
   const containerRef = useRef<HTMLDivElement>(null)
 
   // Calculate joystick center position

@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Stage, Container, Graphics } from '@pixi/react'
+import { Application, extend } from '@pixi/react'
+import { Container, Graphics } from 'pixi.js'
+
+extend({ Container, Graphics })
 
 import { Pause, Play, Home } from 'lucide-react'
 import { useSocketStore } from '@/stores/SocketStore'
@@ -23,41 +26,17 @@ const GamePage: React.FC = () => {
 
   const {
     gameState,
-    localPlayer: storedLocalPlayer,
+    localPlayer,
     camera,
     isGameActive,
     updateCamera,
     setMovementInput,
     setSplitPressed,
     setSpitPressed,
-    setLocalPlayerId,
   } = useGameStore()
 
-  const {
-    sendPlayerInput,
-    sendSplit,
-    sendSpit,
-    onGameStateUpdate,
-    onGameEnded,
-    leaveGame,
-    socket,
-  } = useSocketStore()
-
-  // Derive localPlayer from the store if available, or fall back to looking
-  // up our own socket ID in gameState. This handles the case where navigation
-  // happened before setLocalPlayerId was called (e.g. fast state transitions).
-  const socketId = socket?.id
-  const localPlayer =
-    storedLocalPlayer ??
-    (socketId && gameState?.players[socketId] ? gameState.players[socketId] : null)
-
-  // If we derived the player from gameState but the store doesn't know yet,
-  // sync it so subsequent renders and effects have the correct value.
-  useEffect(() => {
-    if (!storedLocalPlayer && socketId && gameState?.players[socketId]) {
-      setLocalPlayerId(socketId)
-    }
-  }, [storedLocalPlayer, socketId, gameState, setLocalPlayerId])
+  const { sendPlayerInput, sendSplit, sendSpit, onGameStateUpdate, onGameEnded, leaveGame } =
+    useSocketStore()
 
   // Ref used to throttle sendPlayerInput — avoids flooding the socket on every
   // render frame. We target NETWORK_UPDATE_RATE (20 Hz = 50 ms between sends).
@@ -187,18 +166,17 @@ const GamePage: React.FC = () => {
     const screenY = player.position.y - camera.position.y + dimensions.height / 2
 
     return (
-      <Graphics
+      <pixiGraphics
         key={player.id}
         draw={g => {
           g.clear()
-          g.beginFill(player.color)
-          g.drawCircle(0, 0, player.size)
-          g.endFill()
+          g.circle(0, 0, player.size)
+          g.fill({ color: player.color })
 
           // Add outline for local player
           if (player.id === localPlayer?.id) {
-            g.lineStyle(3, 0xffffff, 0.8)
-            g.drawCircle(0, 0, player.size + 2)
+            g.circle(0, 0, player.size + 2)
+            g.stroke({ width: 3, color: 0xffffff, alpha: 0.8 })
           }
         }}
         x={screenX}
@@ -213,15 +191,14 @@ const GamePage: React.FC = () => {
     const screenY = knibble.position.y - camera.position.y + dimensions.height / 2
 
     return (
-      <Graphics
+      <pixiGraphics
         key={knibble.id}
         draw={g => {
           g.clear()
-          g.beginFill(knibble.color)
-          g.drawCircle(0, 0, knibble.size)
-          g.endFill()
-          g.lineStyle(1, 0xffffff, 0.3)
-          g.drawCircle(0, 0, knibble.size)
+          g.circle(0, 0, knibble.size)
+          g.fill({ color: knibble.color })
+          g.circle(0, 0, knibble.size)
+          g.stroke({ width: 1, color: 0xffffff, alpha: 0.3 })
         }}
         x={screenX}
         y={screenY}
@@ -235,15 +212,14 @@ const GamePage: React.FC = () => {
     const screenY = blob.position.y - camera.position.y + dimensions.height / 2
 
     return (
-      <Graphics
+      <pixiGraphics
         key={blob.id}
         draw={g => {
           g.clear()
-          g.beginFill(COLORS.SPIT_BLOB)
-          g.drawCircle(0, 0, blob.size)
-          g.endFill()
-          g.lineStyle(1, 0xffffff, 0.5)
-          g.drawCircle(0, 0, blob.size)
+          g.circle(0, 0, blob.size)
+          g.fill({ color: COLORS.SPIT_BLOB })
+          g.circle(0, 0, blob.size)
+          g.stroke({ width: 1, color: 0xffffff, alpha: 0.5 })
         }}
         x={screenX}
         y={screenY}
@@ -260,11 +236,11 @@ const GamePage: React.FC = () => {
     const screenY = bounds.y - camera.position.y + dimensions.height / 2
 
     return (
-      <Graphics
+      <pixiGraphics
         draw={g => {
           g.clear()
-          g.lineStyle(4, COLORS.BOUNDARY, 0.8)
-          g.drawRect(0, 0, bounds.width, bounds.height)
+          g.rect(0, 0, bounds.width, bounds.height)
+          g.stroke({ width: 4, color: COLORS.BOUNDARY, alpha: 0.8 })
         }}
         x={screenX}
         y={screenY}
@@ -275,7 +251,7 @@ const GamePage: React.FC = () => {
   // Render background grid
   const renderGrid = () => {
     const gridSize = 50
-    const gridLines = []
+    const gridLines: import('react').ReactElement[] = []
 
     // Calculate visible grid lines
     const startX = Math.floor((camera.position.x - dimensions.width / 2) / gridSize) * gridSize
@@ -287,13 +263,13 @@ const GamePage: React.FC = () => {
     for (let x = startX; x <= endX; x += gridSize) {
       const screenX = x - camera.position.x + dimensions.width / 2
       gridLines.push(
-        <Graphics
+        <pixiGraphics
           key={`v-${x}`}
           draw={g => {
             g.clear()
-            g.lineStyle(1, 0xffffff, 0.1)
             g.moveTo(0, 0)
             g.lineTo(0, dimensions.height)
+            g.stroke({ width: 1, color: 0xffffff, alpha: 0.1 })
           }}
           x={screenX}
           y={0}
@@ -305,13 +281,13 @@ const GamePage: React.FC = () => {
     for (let y = startY; y <= endY; y += gridSize) {
       const screenY = y - camera.position.y + dimensions.height / 2
       gridLines.push(
-        <Graphics
+        <pixiGraphics
           key={`h-${y}`}
           draw={g => {
             g.clear()
-            g.lineStyle(1, 0xffffff, 0.1)
             g.moveTo(0, 0)
             g.lineTo(dimensions.width, 0)
+            g.stroke({ width: 1, color: 0xffffff, alpha: 0.1 })
           }}
           x={0}
           y={screenY}
@@ -319,7 +295,7 @@ const GamePage: React.FC = () => {
       )
     }
 
-    return <Container>{gridLines}</Container>
+    return <pixiContainer>{gridLines}</pixiContainer>
   }
 
   if (!gameState || !localPlayer) {
@@ -335,18 +311,16 @@ const GamePage: React.FC = () => {
 
   return (
     <div className='relative w-screen h-screen overflow-hidden bg-[#0F0F23]'>
-      {/* PIXI.js Stage */}
-      <Stage
+      {/* PIXI.js canvas */}
+      <Application
         width={dimensions.width}
         height={dimensions.height}
-        options={{
-          backgroundColor: COLORS.BACKGROUND,
-          antialias: true,
-          resolution: window.devicePixelRatio || 1,
-          autoDensity: true,
-        }}
+        backgroundColor={COLORS.BACKGROUND}
+        antialias={true}
+        resolution={window.devicePixelRatio || 1}
+        autoDensity={true}
       >
-        <Container>
+        <pixiContainer>
           {/* Background grid */}
           {renderGrid()}
 
@@ -363,8 +337,8 @@ const GamePage: React.FC = () => {
           {Object.values(gameState.players)
             .filter(player => player.isAlive)
             .map(renderPlayer)}
-        </Container>
-      </Stage>
+        </pixiContainer>
+      </Application>
 
       {/* UI Overlay */}
       <div className='absolute inset-0 pointer-events-none z-[10] [&>*]:pointer-events-auto'>
@@ -400,7 +374,7 @@ const GamePage: React.FC = () => {
         {/* Pause Menu */}
         {isPaused && (
           <div className='absolute inset-0 flex items-center justify-center bg-black/80 z-[100] backdrop-blur-[10px]'>
-            <div className='bg-black/90 rounded-[--radius-card] p-10 text-center border border-white/10'>
+            <div className='bg-black/90 rounded-card p-10 text-center border border-white/10'>
               <h2 className='text-white mb-[30px] text-[2em]'>Game Paused</h2>
               <div className='flex flex-col gap-[15px] min-w-[200px]'>
                 <button className='btn btn-primary' onClick={handlePause}>

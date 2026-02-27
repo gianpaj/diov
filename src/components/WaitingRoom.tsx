@@ -1,33 +1,31 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Users, Clock, Play, ArrowLeft, Wifi, WifiOff } from 'lucide-react'
 import { useSocketStore } from '@/stores/SocketStore'
 import { useGameStore } from '@/stores/GameStore'
-import { GameStatus, type PlayerState } from '@/types'
+import { GameStatus } from '@/types'
 
 const WaitingRoom: React.FC = () => {
   const navigate = useNavigate()
   const [countdown, setCountdown] = useState<number | null>(null)
-  // Local player list — updated immediately from player_joined / player_left
-  // events so the UI refreshes even during WAITING (when the tick loop is paused).
-  const [players, setPlayers] = useState<PlayerState[]>([])
 
   const {
-    socket,
+    socketId,
     isConnected,
     connectionStatus,
     onGameStateUpdate,
-    onPlayerJoined,
-    onPlayerLeft,
     onGameStarted,
     leaveGame,
     startGame,
   } = useSocketStore()
 
-  const { gameState, uiState, updateUIState, gameConfig, setGameState, setLocalPlayerId } =
-    useGameStore()
+  const { gameState, uiState, updateUIState, gameConfig, setLocalPlayerId } = useGameStore()
 
-  const socketId = socket?.id
+  // Derive the player list directly from the Zustand store's gameState rather
+  // than a separate local useState. This avoids a race where the game_state
+  // packet arrives before the useEffect listener is registered (effects run
+  // after the first paint, but the server sends game_state immediately on join).
+  const players = useMemo(() => (gameState ? Object.values(gameState.players) : []), [gameState])
 
   // Derive player count and host status from local list + game state
   const playerCount = players.length
@@ -42,12 +40,6 @@ const WaitingRoom: React.FC = () => {
   useEffect(() => {
     // Set up socket event listeners
     const unsubscribeGameState = onGameStateUpdate(state => {
-      setGameState(state)
-
-      // Sync local player list from the authoritative game_state snapshot.
-      // This covers the initial join and any missed discrete events.
-      setPlayers(Object.values(state.players))
-
       // If game is starting, show countdown
       if (state.status === GameStatus.STARTING) {
         const timeUntilStart = state.startTime - Date.now()
@@ -57,8 +49,6 @@ const WaitingRoom: React.FC = () => {
       }
 
       // If game is playing, resolve the local player then navigate.
-      // setLocalPlayerId also populates localPlayer from the incoming state,
-      // so GamePage won't be stuck in the loading guard.
       if (state.status === GameStatus.PLAYING) {
         if (socketId) {
           setLocalPlayerId(socketId)
@@ -67,34 +57,17 @@ const WaitingRoom: React.FC = () => {
       }
     })
 
-    // Update the local player list immediately — no need to wait for the next tick.
-    const unsubscribePlayerJoined = onPlayerJoined(data => {
-      setPlayers(prev => {
-        // Avoid duplicates if the game_state tick already added this player.
-        if (prev.some(p => p.id === data.player.id)) return prev
-        return [...prev, data.player]
-      })
-    })
-
-    const unsubscribePlayerLeft = onPlayerLeft(data => {
-      setPlayers(prev => prev.filter(p => p.id !== data.playerId))
-    })
-
     const unsubscribeGameStarted = onGameStarted(data => {
       // Just drive the visible countdown — navigation is handled exclusively
       // by the onGameStateUpdate handler when status flips to PLAYING.
-      // Having a second navigate() here caused a spurious re-navigation
-      // 5 s after the game had already started.
       setCountdown(data.countdown)
     })
 
     return () => {
       unsubscribeGameState()
-      unsubscribePlayerJoined()
-      unsubscribePlayerLeft()
       unsubscribeGameStarted()
     }
-  }, [onGameStateUpdate, onPlayerJoined, onPlayerLeft, onGameStarted, setGameState, navigate])
+  }, [onGameStateUpdate, onGameStarted, navigate])
 
   // Countdown effect
   useEffect(() => {
@@ -150,17 +123,17 @@ const WaitingRoom: React.FC = () => {
   }
 
   const handleStartGame = () => {
-    // emit the custom event to the server
+    // Just tell the server to start — navigation is driven by the
+    // onGameStateUpdate handler when status flips to PLAYING.
     startGame()
-    navigate('/game')
   }
 
   if (countdown !== null) {
     return (
       <div className='w-screen h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#16213e_35%,#0f0f23_100%)]'>
-        <div className='text-center bg-black/80 rounded-[--radius-card] px-[60px] py-[60px] backdrop-blur-[20px] border border-white/10'>
-          <h1 className='text-[2.5em] mb-[30px] text-white'>Game Starting!</h1>
-          <div className='text-[8em] font-bold text-[--color-accent-red] my-5 [text-shadow:0_0_30px_rgba(255,107,107,0.5)] animate-pulse'>
+        <div className='text-center bg-black/80 rounded-card px-15 py-15 backdrop-blur-[20px] border border-white/10'>
+          <h1 className='text-[2.5em] mb-7.5 text-white'>Game Starting!</h1>
+          <div className='text-[8em] font-bold text-accent-red my-5 [text-shadow:0_0_30px_rgba(255,107,107,0.5)] animate-pulse'>
             {countdown}
           </div>
           <p className='text-[1.3em] text-white/80 mt-5'>Get ready to battle!</p>
@@ -171,9 +144,9 @@ const WaitingRoom: React.FC = () => {
 
   return (
     <div className='w-screen h-screen flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#16213e_35%,#0f0f23_100%)]'>
-      <div className='animate-[fadeIn_0.5s_ease-out] bg-black/80 rounded-[--radius-card] p-[30px] backdrop-blur-[20px] border border-white/10 min-w-[600px] max-w-[800px] max-h-[90vh] overflow-y-auto'>
+      <div className='animate-[fadeIn_0.5s_ease-out] bg-black/80 rounded-card p-7.5 backdrop-blur-[20px] border border-white/10 min-w-150 max-w-200 max-h-[90vh] overflow-y-auto'>
         {/* Header */}
-        <div className='flex justify-between items-center mb-[30px] pb-5 border-b border-white/10'>
+        <div className='flex justify-between items-center mb-7.5 pb-5 border-b border-white/10'>
           <div className='flex-1'>
             <button
               className='btn btn-secondary'
@@ -201,11 +174,11 @@ const WaitingRoom: React.FC = () => {
           </div>
         </div>
 
-        <div className='flex flex-col gap-[30px]'>
+        <div className='flex flex-col gap-7.5'>
           {/* Game status */}
           <div className='text-center'>
             <div className='flex items-center justify-center gap-5 bg-white/5 rounded-[15px] p-5 border border-white/10 mb-5'>
-              <div className='text-[--color-accent-teal]'>
+              <div className='text-accent-teal'>
                 <Users size={32} />
               </div>
               <div>
@@ -220,7 +193,7 @@ const WaitingRoom: React.FC = () => {
               {/* Progress bar */}
               <div className='w-full h-2 bg-white/10 rounded overflow-hidden my-2.5'>
                 <div
-                  className='h-full bg-gradient-to-r from-[--color-accent-red] to-[--color-accent-teal] rounded transition-[width] duration-300'
+                  className='h-full bg-gradient-to-r from-accent-red to-accent-teal rounded transition-[width] duration-300'
                   style={{ width: `${Math.max((playerCount / minPlayers) * 100, 0)}%` }}
                 />
               </div>
@@ -265,7 +238,7 @@ const WaitingRoom: React.FC = () => {
                     <div className='text-white font-semibold flex items-center gap-2'>
                       {player.name}
                       {player.name === uiState.playerName && (
-                        <span className='text-[--color-accent-teal] text-[0.8em] font-normal'>(You)</span>
+                        <span className='text-accent-teal text-[0.8em] font-normal'>(You)</span>
                       )}
                     </div>
                     <div className='text-white/60 text-[0.85em]'>Ready</div>

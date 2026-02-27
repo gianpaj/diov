@@ -46,11 +46,11 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
   }
 
   return (
-    <div className='absolute inset-0 flex items-center justify-center z-[100] bg-black/95 backdrop-blur-[20px]'>
-      <div className='animate-[fadeIn_0.5s_ease-out] bg-black/80 rounded-[--radius-card] p-10 border border-white/10 max-w-[600px] max-h-[90vh] overflow-y-auto text-center backdrop-blur-[20px]'>
+    <div className='absolute inset-0 flex items-center justify-center z-100 bg-black/95 backdrop-blur-[20px]'>
+      <div className='animate-[fadeIn_0.5s_ease-out] bg-black/80 rounded-card p-10 border border-white/10 max-w-150 max-h-[90vh] overflow-y-auto text-center backdrop-blur-[20px]'>
         {/* Result header */}
-        <div className='mb-[30px]'>
-          <div className='mb-[15px]' style={{ color: getResultColor() }}>
+        <div className='mb-7.5'>
+          <div className='mb-3.75' style={{ color: getResultColor() }}>
             {getResultIcon()}
           </div>
           <h1
@@ -67,17 +67,21 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
         </div>
 
         {/* Stats */}
-        <div className='mb-[30px]'>
+        <div className='mb-7.5'>
           <div className='grid grid-cols-2 gap-[15px] mb-[30px]'>
             <div className='flex items-center gap-3 p-[15px] bg-white/5 rounded-xl border border-white/10'>
-              <div className='text-white/70'><Target size={24} /></div>
+              <div className='text-white/70'>
+                <Target size={24} />
+              </div>
               <div className='text-left'>
-                <div className='text-2xl font-bold text-[--color-accent-teal] leading-none'>#{playerRank}</div>
+                <div className='text-2xl font-bold text-accent-teal leading-none'>
+                  #{playerRank}
+                </div>
                 <div className='text-[0.85em] text-white/60 mt-0.5'>Final Rank</div>
               </div>
             </div>
 
-            <div className='flex items-center gap-3 p-[15px] bg-white/5 rounded-xl border border-white/10'>
+            <div className='flex items-center gap-3 p-3.75 bg-white/5 rounded-xl border border-white/10'>
               <div className='text-white/70'>
                 <div
                   className='rounded-full'
@@ -89,13 +93,17 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
                 />
               </div>
               <div className='text-left'>
-                <div className='text-2xl font-bold text-white leading-none'>{Math.round(localPlayer.size)}</div>
+                <div className='text-2xl font-bold text-white leading-none'>
+                  {Math.round(localPlayer.size)}
+                </div>
                 <div className='text-[0.85em] text-white/60 mt-0.5'>Final Size</div>
               </div>
             </div>
 
             <div className='flex items-center gap-3 p-[15px] bg-white/5 rounded-xl border border-white/10'>
-              <div className='text-white/70'><Users size={24} /></div>
+              <div className='text-white/70'>
+                <Users size={24} />
+              </div>
               <div className='text-left'>
                 <div className='text-2xl font-bold text-white leading-none'>{totalPlayers}</div>
                 <div className='text-[0.85em] text-white/60 mt-0.5'>Total Players</div>
@@ -103,9 +111,13 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
             </div>
 
             <div className='flex items-center gap-3 p-[15px] bg-white/5 rounded-xl border border-white/10'>
-              <div className='text-white/70'><Clock size={24} /></div>
+              <div className='text-white/70'>
+                <Clock size={24} />
+              </div>
               <div className='text-left'>
-                <div className='text-2xl font-bold text-white leading-none'>{formatDuration(gameDuration)}</div>
+                <div className='text-2xl font-bold text-white leading-none'>
+                  {formatDuration(gameDuration)}
+                </div>
                 <div className='text-[0.85em] text-white/60 mt-0.5'>Game Duration</div>
               </div>
             </div>
@@ -121,10 +133,10 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 bg-white/[0.03] rounded-lg',
                     player.id === localPlayer.id &&
-                      'bg-[rgba(78,205,196,0.1)] border border-[rgba(78,205,196,0.3)]',
+                      'bg-[rgba(78,205,196,0.1)] border border-[rgba(78,205,196,0.3)]'
                   )}
                 >
-                  <div className='font-bold text-white/80 min-w-[30px] text-left'>#{index + 1}</div>
+                  <div className='font-bold text-white/80 min-w-7.5 text-left'>#{index + 1}</div>
                   <div className='shrink-0'>
                     <div
                       className='w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm'
@@ -137,12 +149,16 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
                     <div className='text-white font-semibold text-[0.9em] flex items-center gap-1.5'>
                       {player.name}
                       {player.id === localPlayer.id && (
-                        <span className='text-[--color-accent-teal] text-xs font-normal'>(You)</span>
+                        <span className='text-accent-teal text-xs font-normal'>(You)</span>
                       )}
                     </div>
-                    <div className='text-white/50 text-[0.75em]'>{player.isAlive ? 'Alive' : 'Eliminated'}</div>
+                    <div className='text-white/50 text-[0.75em]'>
+                      {player.isAlive ? 'Alive' : 'Eliminated'}
+                    </div>
                   </div>
-                  <div className='text-white/70 font-bold text-[0.9em]'>{Math.round(player.size)}</div>
+                  <div className='text-white/70 font-bold text-[0.9em]'>
+                    {Math.round(player.size)}
+                  </div>
                 </div>
               ))}
             </div>
@@ -150,8 +166,8 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
         </div>
 
         {/* Actions */}
-        <div className='flex justify-center gap-[15px]'>
-          <button className='btn btn-primary min-w-[150px]' onClick={onRestart}>
+        <div className='flex justify-center gap-3.75'>
+          <button className='btn btn-primary min-w-37.5' onClick={onRestart}>
             <Home size={20} />
             Play Again
           </button>

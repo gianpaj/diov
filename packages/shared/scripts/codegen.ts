@@ -100,6 +100,11 @@ export interface Boundary {
   height: number
 }
 
+export interface InputVector {
+  x: number
+  y: number
+}
+
 // ── Room / game status ───────────────────────────────────────────────────────
 
 /**
@@ -166,6 +171,58 @@ export interface SpitBlobState {
   despawnTime: number
 }
 
+// ── Subscription-driven authoritative row types ─────────────────────────────
+
+export interface RoomState {
+  id: RoomId
+  status: RoomStatusValue
+  hostId?: string
+  countdownEndsAt?: number
+  startedAt?: number
+  endedAt?: number
+  durationMs: number
+  maxPlayers: number
+  minPlayers: number
+  winnerId?: string
+  lastUpdateAt: number
+  bounds: Boundary
+}
+
+export interface PlayerRowState {
+  id: PlayerId
+  roomId: RoomId
+  name: string
+  position: Vector2D
+  velocity: Vector2D
+  input: InputVector
+  size: number
+  color: string
+  score: number
+  isAlive: boolean
+  lastSplitTime: number
+  lastSpitTime: number
+  joinedAt: number
+}
+
+export interface KnibbleRowState {
+  id: string
+  roomId: RoomId
+  position: Vector2D
+  size: number
+  color: string
+}
+
+export interface SpitBlobRowState {
+  id: string
+  roomId: RoomId
+  playerId: PlayerId
+  position: Vector2D
+  velocity: Vector2D
+  size: number
+  color: string
+  createdAt: number
+}
+
 // ── Top-level GameState ──────────────────────────────────────────────────────
 
 /**
@@ -219,10 +276,7 @@ export interface RoomConfig {
  * \`movement.x\` and \`movement.y\` are normalised values in [-1, 1].
  */
 export interface PlayerInput {
-  movement: {
-    x: number
-    y: number
-  }
+  movement: InputVector
   splitPressed: boolean
   spitPressed: boolean
 }

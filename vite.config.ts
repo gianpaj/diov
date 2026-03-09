@@ -20,7 +20,8 @@ export default defineConfig({
         description: 'A multiplayer 2D webapp game where players compete to eat each other',
         theme_color: '#000000',
         background_color: '#ffffff',
-        display: 'landscape',
+        // type Display = 'fullscreen' | 'standalone' | 'minimal-ui' | 'browser';
+        // display: 'browser',
         orientation: 'landscape',
         icons: [
           {

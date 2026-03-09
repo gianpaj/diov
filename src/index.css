@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source not "../docs/**";
 
 /* ── Tailwind v4 theme tokens ─────────────────────────────────────────────────
    These CSS custom properties are consumed by Tailwind utility classes AND by

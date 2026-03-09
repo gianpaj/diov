@@ -43,6 +43,11 @@ export const boundarySchema = z.object({
   height: z.number(),
 })
 
+export const inputVectorSchema = z.object({
+  x: z.number().min(-1).max(1),
+  y: z.number().min(-1).max(1),
+})
+
 // ── Room / game status ─────────────────────────────────────────────────────
 
 /**
@@ -89,6 +94,58 @@ export const spitBlobStateSchema = z.object({
   color: z.string(),
   spawnTime: z.number(),
   despawnTime: z.number(),
+})
+
+// ── Subscription-driven authoritative row schemas ──────────────────────────
+
+export const roomStateSchema = z.object({
+  id: roomId,
+  status: roomStatusSchema,
+  hostId: z.string().optional(),
+  countdownEndsAt: z.number().optional(),
+  startedAt: z.number().optional(),
+  endedAt: z.number().optional(),
+  durationMs: z.number().int().positive(),
+  maxPlayers: z.number().int().positive(),
+  minPlayers: z.number().int().positive(),
+  winnerId: z.string().optional(),
+  lastUpdateAt: z.number(),
+  bounds: boundarySchema,
+})
+
+export const playerRowStateSchema = z.object({
+  id: playerId,
+  roomId: roomId,
+  name: z.string(),
+  position: vector2DSchema,
+  velocity: vector2DSchema,
+  input: inputVectorSchema,
+  size: z.number(),
+  color: z.string(),
+  score: z.number().int(),
+  isAlive: z.boolean(),
+  lastSplitTime: z.number(),
+  lastSpitTime: z.number(),
+  joinedAt: z.number(),
+})
+
+export const knibbleRowStateSchema = z.object({
+  id: z.string(),
+  roomId: roomId,
+  position: vector2DSchema,
+  size: z.number(),
+  color: z.string(),
+})
+
+export const spitBlobRowStateSchema = z.object({
+  id: z.string(),
+  roomId: roomId,
+  playerId: playerId,
+  position: vector2DSchema,
+  velocity: vector2DSchema,
+  size: z.number(),
+  color: z.string(),
+  createdAt: z.number(),
 })
 
 // ── Top-level GameState ────────────────────────────────────────────────────
@@ -147,10 +204,7 @@ export const roomConfigSchema = z.object({
  * `movement.x` and `movement.y` are normalised values in [-1, 1].
  */
 export const playerInputSchema = z.object({
-  movement: z.object({
-    x: z.number().min(-1).max(1),
-    y: z.number().min(-1).max(1),
-  }),
+  movement: inputVectorSchema,
   splitPressed: z.boolean(),
   spitPressed: z.boolean(),
 })
@@ -257,10 +311,15 @@ export const errorPayloadSchema = z.object({
 
 export type Vector2D = z.infer<typeof vector2DSchema>
 export type Boundary = z.infer<typeof boundarySchema>
+export type InputVector = z.infer<typeof inputVectorSchema>
 export type RoomStatus = z.infer<typeof roomStatusSchema>
+export type RoomState = z.infer<typeof roomStateSchema>
 export type PlayerState = z.infer<typeof playerStateSchema>
+export type PlayerRowState = z.infer<typeof playerRowStateSchema>
 export type KnibbleState = z.infer<typeof knibbleStateSchema>
+export type KnibbleRowState = z.infer<typeof knibbleRowStateSchema>
 export type SpitBlobState = z.infer<typeof spitBlobStateSchema>
+export type SpitBlobRowState = z.infer<typeof spitBlobRowStateSchema>
 export type GameState = z.infer<typeof gameStateSchema>
 export type RoomConfig = z.infer<typeof roomConfigSchema>
 export type PlayerInput = z.infer<typeof playerInputSchema>

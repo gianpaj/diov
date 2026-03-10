@@ -12,6 +12,7 @@ import {
   type KnibbleRowState,
   type Player,
   type PlayerInput,
+  type PlayerResultRowState,
   type PlayerRowState,
   type RoomState,
   type SpitBlobRowState,
@@ -24,10 +25,12 @@ interface GameStore {
   gameState: GameState | null
   roomState: RoomState | null
   playerRows: Record<string, PlayerRowState>
+  playerResultRows: Record<string, PlayerResultRowState>
   knibbleRows: Record<string, KnibbleRowState>
   spitBlobRows: Record<string, SpitBlobRowState>
   localPlayer: Player | null
   localPlayerRow: PlayerRowState | null
+  localPlayerResultRow: PlayerResultRowState | null
   localPlayerId: string | null
   playerInput: PlayerInput
   camera: Camera
@@ -39,6 +42,7 @@ interface GameStore {
   setAuthoritativeState: (state: {
     room: RoomState | null
     players: Record<string, PlayerRowState>
+    playerResults: Record<string, PlayerResultRowState>
     knibbles: Record<string, KnibbleRowState>
     spitBlobs: Record<string, SpitBlobRowState>
   }) => void
@@ -110,10 +114,12 @@ export const useGameStore = create<GameStore>()(
     gameState: null,
     roomState: null,
     playerRows: {},
+    playerResultRows: {},
     knibbleRows: {},
     spitBlobRows: {},
     localPlayer: null,
     localPlayerRow: null,
+    localPlayerResultRow: null,
     localPlayerId: null,
     playerInput: defaultPlayerInput,
     camera: defaultCamera,
@@ -131,17 +137,21 @@ export const useGameStore = create<GameStore>()(
       }
     },
 
-    setAuthoritativeState: ({ room, players, knibbles, spitBlobs }) => {
+    setAuthoritativeState: ({ room, players, playerResults, knibbles, spitBlobs }) => {
       set({
         roomState: room,
         playerRows: players,
+        playerResultRows: playerResults,
         knibbleRows: knibbles,
         spitBlobRows: spitBlobs,
       })
 
       const { localPlayerId } = get()
       if (localPlayerId) {
-        set({ localPlayerRow: players[localPlayerId] ?? null })
+        set({
+          localPlayerRow: players[localPlayerId] ?? null,
+          localPlayerResultRow: playerResults[localPlayerId] ?? null,
+        })
       }
     },
 
@@ -153,12 +163,15 @@ export const useGameStore = create<GameStore>()(
       set({ localPlayerId: id })
 
       // Update local player if game state / authoritative state exists
-      const { gameState, playerRows } = get()
+      const { gameState, playerRows, playerResultRows } = get()
       if (gameState && gameState.players[id]) {
         set({ localPlayer: gameState.players[id] })
       }
       if (playerRows[id]) {
         set({ localPlayerRow: playerRows[id] })
+      }
+      if (playerResultRows[id]) {
+        set({ localPlayerResultRow: playerResultRows[id] })
       }
     },
 
@@ -185,10 +198,12 @@ export const useGameStore = create<GameStore>()(
         gameState: null,
         roomState: null,
         playerRows: {},
+        playerResultRows: {},
         knibbleRows: {},
         spitBlobRows: {},
         localPlayer: null,
         localPlayerRow: null,
+        localPlayerResultRow: null,
         localPlayerId: null,
         playerInput: defaultPlayerInput,
         camera: defaultCamera,

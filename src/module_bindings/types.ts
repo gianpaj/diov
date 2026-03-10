@@ -47,6 +47,21 @@ export const Player = __t.object("Player", {
 });
 export type Player = __Infer<typeof Player>;
 
+export const PlayerResult = __t.object("PlayerResult", {
+  id: __t.string(),
+  roomId: __t.string(),
+  playerIdentity: __t.identity(),
+  name: __t.string(),
+  color: __t.string(),
+  placement: __t.u32(),
+  finalSize: __t.f64(),
+  finalScore: __t.u32(),
+  joinedAt: __t.i64(),
+  eliminatedAt: __t.i64(),
+  wasWinner: __t.bool(),
+});
+export type PlayerResult = __Infer<typeof PlayerResult>;
+
 export const Room = __t.object("Room", {
   id: __t.string(),
   status: __t.string(),

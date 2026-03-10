@@ -13,6 +13,7 @@ import {
   type PlayerInput,
   type PlayerJoinedMessage,
   type PlayerLeftMessage,
+  type PlayerResultRowState,
   type PlayerRowState,
   type RoomState,
   type SocketMessage,
@@ -101,6 +102,20 @@ const toSpitBlobRowState = (row: any): SpitBlobRowState => ({
   size: row.size,
   color: COLORS.SPIT_BLOB,
   createdAt: Number(row.createdAt),
+})
+
+const toPlayerResultRowState = (row: any): PlayerResultRowState => ({
+  id: row.id,
+  roomId: row.roomId,
+  playerId: row.playerIdentity.toHexString(),
+  name: row.name,
+  color: row.color,
+  placement: row.placement,
+  finalSize: row.finalSize,
+  finalScore: row.finalScore,
+  joinedAt: Number(row.joinedAt),
+  eliminatedAt: Number(row.eliminatedAt),
+  wasWinner: row.wasWinner,
 })
 
 const toPlayerState = (row: any) => ({
@@ -246,6 +261,13 @@ export const useSocketStore = create<SocketStore>((set, get) => {
         acc[player.id] = player
         return acc
       }, {})
+    const playerResultRows = [...connection.db.playerResult.iter()]
+      .filter((row: any) => row.roomId === activeRoomId)
+      .reduce<Record<string, PlayerResultRowState>>((acc, row: any) => {
+        const playerResult = toPlayerResultRowState(row)
+        acc[playerResult.playerId] = playerResult
+        return acc
+      }, {})
     const knibbleRows = [...connection.db.knibble.iter()]
       .filter((row: any) => row.roomId === activeRoomId)
       .reduce<Record<string, KnibbleRowState>>((acc, row: any) => {
@@ -264,6 +286,7 @@ export const useSocketStore = create<SocketStore>((set, get) => {
     useGameStore.getState().setAuthoritativeState({
       room,
       players: playerRows,
+      playerResults: playerResultRows,
       knibbles: knibbleRows,
       spitBlobs: spitBlobRows,
     })
@@ -317,7 +340,23 @@ export const useSocketStore = create<SocketStore>((set, get) => {
 
     if (next.status === GameStatus.FINISHED && previous?.status !== GameStatus.FINISHED) {
       emitTo(gameEndedListeners, {
-        winner: next.winner ? next.players[next.winner] ?? null : null,
+        winner:
+          next.winner && next.players[next.winner]
+            ? next.players[next.winner]
+            : next.winner && playerResultRows[next.winner]
+              ? {
+                  id: playerResultRows[next.winner].playerId,
+                  name: playerResultRows[next.winner].name,
+                  position: { x: 0, y: 0 },
+                  velocity: { x: 0, y: 0 },
+                  size: playerResultRows[next.winner].finalSize,
+                  color: playerResultRows[next.winner].color,
+                  isAlive: false,
+                  score: playerResultRows[next.winner].finalScore,
+                  lastSplitTime: 0,
+                  lastSpitTime: 0,
+                }
+              : null,
         finalState: next,
       })
     }
@@ -338,6 +377,9 @@ export const useSocketStore = create<SocketStore>((set, get) => {
       syncAuthoritativeState()
     })
     connection.db.player.onDelete(syncAuthoritativeState)
+    connection.db.playerResult.onInsert(syncAuthoritativeState)
+    connection.db.playerResult.onUpdate(syncAuthoritativeState)
+    connection.db.playerResult.onDelete(syncAuthoritativeState)
     connection.db.knibble.onInsert(syncAuthoritativeState)
     connection.db.knibble.onUpdate(syncAuthoritativeState)
     connection.db.knibble.onDelete(syncAuthoritativeState)
@@ -386,6 +428,7 @@ export const useSocketStore = create<SocketStore>((set, get) => {
             .subscribe([
               'SELECT * FROM room',
               'SELECT * FROM player',
+              'SELECT * FROM player_result',
               'SELECT * FROM knibble',
               'SELECT * FROM spit_blob',
             ])

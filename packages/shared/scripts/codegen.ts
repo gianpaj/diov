@@ -223,6 +223,20 @@ export interface SpitBlobRowState {
   createdAt: number
 }
 
+export interface PlayerResultRowState {
+  id: string
+  roomId: RoomId
+  playerId: PlayerId
+  name: string
+  color: string
+  placement: number
+  finalSize: number
+  finalScore: number
+  joinedAt: number
+  eliminatedAt: number
+  wasWinner: boolean
+}
+
 // ── Top-level GameState ──────────────────────────────────────────────────────
 
 /**

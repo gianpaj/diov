@@ -46,6 +46,7 @@ import StartGameReducer from "./start_game_reducer";
 // Import all table schema definitions
 import KnibbleRow from "./knibble_table";
 import PlayerRow from "./player_table";
+import PlayerResultRow from "./player_result_table";
 import RoomRow from "./room_table";
 import SpitBlobRow from "./spit_blob_table";
 
@@ -75,6 +76,17 @@ const tablesSchema = __schema({
       { name: 'player_identity_key', constraint: 'unique', columns: ['identity'] },
     ],
   }, PlayerRow),
+  playerResult: __table({
+    name: 'player_result',
+    indexes: [
+      { name: 'id', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'player_result_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, PlayerResultRow),
   room: __table({
     name: 'room',
     indexes: [

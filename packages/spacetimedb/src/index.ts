@@ -100,6 +100,27 @@ const spitBlob = table(
   }
 )
 
+const playerResult = table(
+  {
+    name: 'player_result',
+    public: true,
+    indexes: [{ name: 'player_result_room_id_idx', algorithm: 'btree', columns: ['roomId'] }],
+  },
+  {
+    id: t.string().primaryKey(),
+    roomId: t.string(),
+    playerIdentity: t.identity(),
+    name: t.string(),
+    color: t.string(),
+    placement: t.u32(),
+    finalSize: t.f64(),
+    finalScore: t.u32(),
+    joinedAt: t.i64(),
+    eliminatedAt: t.i64(),
+    wasWinner: t.bool(),
+  }
+)
+
 const gameTick = table(
   {
     name: 'game_tick',
@@ -113,7 +134,7 @@ const gameTick = table(
   }
 )
 
-const battleCircles = schema({ room, player, knibble, spitBlob, gameTick })
+const battleCircles = schema({ room, player, knibble, spitBlob, playerResult, gameTick })
 export default battleCircles
 
 function nowMicros(ctx: { timestamp: { microsSinceUnixEpoch: bigint } }): bigint {
@@ -154,6 +175,14 @@ function roomPlayers(ctx: any, roomId: string) {
 
 function roomPlayerCount(ctx: any, roomId: string): number {
   return roomPlayers(ctx, roomId).length
+}
+
+function roomPlayerResults(ctx: any, roomId: string) {
+  return [...ctx.db.playerResult.iter()].filter((row: any) => row.roomId === roomId)
+}
+
+function playerResultId(roomId: string, identity: any): string {
+  return `${roomId}:${identity.toHexString()}`
 }
 
 function ensureRoom(ctx: any, roomId: string) {
@@ -258,6 +287,12 @@ function resetRoomToWaiting(ctx: any, currentRoom: any, patch: Record<string, un
   })
 }
 
+function clearPlayerResults(ctx: any, roomId: string) {
+  for (const resultRow of roomPlayerResults(ctx, roomId)) {
+    ctx.db.playerResult.id.delete(resultRow.id)
+  }
+}
+
 function ensureGameTick(ctx: any, roomId: string, afterMicros: bigint = TICK_INTERVAL_MS * 1000n) {
   ctx.db.gameTick.insert({
     scheduledId: 0n,
@@ -285,6 +320,38 @@ function maintainKnibbles(ctx: any, roomId: string) {
   for (let i = 0; i < Math.min(toSpawn, 8); i += 1) {
     spawnKnibble(ctx, roomId)
   }
+}
+
+function recordPlayerResult(
+  ctx: any,
+  roomId: string,
+  playerRow: any,
+  placement: number,
+  eliminatedAt: bigint,
+  wasWinner = false
+) {
+  const id = playerResultId(roomId, playerRow.identity)
+  const existing = ctx.db.playerResult.id.find(id)
+  const nextRow = {
+    id,
+    roomId,
+    playerIdentity: playerRow.identity,
+    name: playerRow.name,
+    color: playerRow.color,
+    placement,
+    finalSize: playerRow.radius,
+    finalScore: playerRow.score,
+    joinedAt: playerRow.joinedAt,
+    eliminatedAt,
+    wasWinner,
+  }
+
+  if (existing) {
+    ctx.db.playerResult.id.update(nextRow)
+    return
+  }
+
+  ctx.db.playerResult.insert(nextRow)
 }
 
 function resolveKnibbleCollisions(ctx: any, roomId: string) {
@@ -323,6 +390,7 @@ function resolveKnibbleCollisions(ctx: any, roomId: string) {
 
 function resolvePlayerCollisions(ctx: any, roomId: string) {
   const players = roomPlayers(ctx, roomId)
+  const eliminationTime = currentTimeMs(ctx)
 
   for (let i = 0; i < players.length; i += 1) {
     const first = players[i]
@@ -357,6 +425,7 @@ function resolvePlayerCollisions(ctx: any, roomId: string) {
           radius: latestFirst.radius + Math.round(latestSecond.radius * 0.1),
           score: latestFirst.score + Math.round(latestSecond.radius),
         })
+        recordPlayerResult(ctx, roomId, latestSecond, roomPlayerCount(ctx, roomId), eliminationTime)
         ctx.db.player.identity.delete(latestSecond.identity)
       } else if (latestSecond.radius > latestFirst.radius * 1.1) {
         ctx.db.player.identity.update({
@@ -364,6 +433,7 @@ function resolvePlayerCollisions(ctx: any, roomId: string) {
           radius: latestSecond.radius + Math.round(latestFirst.radius * 0.1),
           score: latestSecond.score + Math.round(latestFirst.radius),
         })
+        recordPlayerResult(ctx, roomId, latestFirst, roomPlayerCount(ctx, roomId), eliminationTime)
         ctx.db.player.identity.delete(latestFirst.identity)
         break
       }
@@ -373,6 +443,7 @@ function resolvePlayerCollisions(ctx: any, roomId: string) {
 
 function resetPlayersForNewMatch(ctx: any, roomId: string) {
   const startedAt = currentTimeMs(ctx)
+  clearPlayerResults(ctx, roomId)
   for (const currentPlayer of roomPlayers(ctx, roomId)) {
     const spawn = randomSpawn(ctx, PLAYER_START_RADIUS)
     ctx.db.player.identity.update({
@@ -425,6 +496,9 @@ export const leave_game = battleCircles.reducer((ctx) => {
   }
 
   const currentRoom = ctx.db.room.id.find(playerRow.roomId)
+  if (currentRoom && (currentRoom.status === 'starting' || currentRoom.status === 'playing')) {
+    recordPlayerResult(ctx, playerRow.roomId, playerRow, roomPlayerCount(ctx, playerRow.roomId), currentTimeMs(ctx))
+  }
   ctx.db.player.identity.delete(ctx.sender)
   if (!currentRoom) {
     return
@@ -583,6 +657,9 @@ export const process_tick = battleCircles.reducer({ arg: gameTick.rowType }, (ct
 
     const remainingPlayers = roomPlayers(ctx, refreshedRoom.id)
     if (remainingPlayers.length <= 1) {
+      if (remainingPlayers[0]) {
+        recordPlayerResult(ctx, refreshedRoom.id, remainingPlayers[0], 1, nowMs, true)
+      }
       updateRoomTimestamp(ctx, refreshedRoom, {
         status: 'finished',
         endedAt: nowMs,
@@ -592,10 +669,24 @@ export const process_tick = battleCircles.reducer({ arg: gameTick.rowType }, (ct
       refreshedRoom.startedAt &&
       nowMs - refreshedRoom.startedAt >= BigInt(refreshedRoom.durationMs)
     ) {
+      const rankedPlayers = [...remainingPlayers].sort((a, b) => {
+        if (b.radius !== a.radius) {
+          return b.radius - a.radius
+        }
+        if (b.score !== a.score) {
+          return b.score - a.score
+        }
+        return Number(a.joinedAt - b.joinedAt)
+      })
+
+      rankedPlayers.forEach((currentPlayer, index) => {
+        recordPlayerResult(ctx, refreshedRoom.id, currentPlayer, index + 1, nowMs, index === 0)
+      })
+
       updateRoomTimestamp(ctx, refreshedRoom, {
         status: 'finished',
         endedAt: nowMs,
-        winnerIdentity: undefined,
+        winnerIdentity: rankedPlayers[0]?.identity,
       })
     }
   }
@@ -620,6 +711,9 @@ export const on_disconnect = battleCircles.clientDisconnected((ctx) => {
   }
 
   const currentRoom = ctx.db.room.id.find(playerRow.roomId)
+  if (currentRoom && (currentRoom.status === 'starting' || currentRoom.status === 'playing')) {
+    recordPlayerResult(ctx, playerRow.roomId, playerRow, roomPlayerCount(ctx, playerRow.roomId), currentTimeMs(ctx))
+  }
   ctx.db.player.identity.delete(ctx.sender)
 
   if (!currentRoom) {

@@ -14,6 +14,7 @@ export type {
   RoomState,
   PlayerState,
   PlayerRowState,
+  PlayerResultRowState,
   KnibbleState,
   KnibbleRowState,
   SpitBlobState,

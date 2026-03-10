@@ -148,6 +148,20 @@ export const spitBlobRowStateSchema = z.object({
   createdAt: z.number(),
 })
 
+export const playerResultRowStateSchema = z.object({
+  id: z.string(),
+  roomId: roomId,
+  playerId: playerId,
+  name: z.string(),
+  color: z.string(),
+  placement: z.number().int().positive(),
+  finalSize: z.number(),
+  finalScore: z.number().int(),
+  joinedAt: z.number(),
+  eliminatedAt: z.number(),
+  wasWinner: z.boolean(),
+})
+
 // ── Top-level GameState ────────────────────────────────────────────────────
 
 /**
@@ -320,6 +334,7 @@ export type KnibbleState = z.infer<typeof knibbleStateSchema>
 export type KnibbleRowState = z.infer<typeof knibbleRowStateSchema>
 export type SpitBlobState = z.infer<typeof spitBlobStateSchema>
 export type SpitBlobRowState = z.infer<typeof spitBlobRowStateSchema>
+export type PlayerResultRowState = z.infer<typeof playerResultRowStateSchema>
 export type GameState = z.infer<typeof gameStateSchema>
 export type RoomConfig = z.infer<typeof roomConfigSchema>
 export type PlayerInput = z.infer<typeof playerInputSchema>

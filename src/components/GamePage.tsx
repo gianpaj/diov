@@ -25,13 +25,13 @@ const GamePage: React.FC = () => {
   })
 
   const {
-    gameState,
     roomState,
     playerRows,
     knibbleRows,
     spitBlobRows,
     localPlayer,
     localPlayerRow,
+    localPlayerId,
     camera,
     isGameActive,
     updateCamera,
@@ -40,8 +40,7 @@ const GamePage: React.FC = () => {
     setSpitPressed,
   } = useGameStore()
 
-  const { sendPlayerInput, sendSplit, sendSpit, onGameStateUpdate, onGameEnded, leaveGame } =
-    useSocketStore()
+  const { sendPlayerInput, sendSplit, sendSpit, onGameEnded, leaveGame } = useSocketStore()
 
   // Ref used to throttle sendPlayerInput — avoids flooding the socket on every
   // render frame. We target NETWORK_UPDATE_RATE (20 Hz = 50 ms between sends).
@@ -118,25 +117,10 @@ const GamePage: React.FC = () => {
     })
   }, [localPlayerRow, roomState, updateCamera])
 
-  // Handle game state updates
-  useEffect(() => {
-    const unsubscribe = onGameStateUpdate(state => {
-      if (state.status === GameStatus.FINISHED) {
-        // Game ended, show game over screen
-        setTimeout(() => {
-          navigate('/')
-        }, 10000) // Auto-navigate after 10 seconds
-      }
-    })
-
-    return unsubscribe
-  }, [onGameStateUpdate, navigate])
-
   // Handle game end
   useEffect(() => {
     const unsubscribe = onGameEnded(data => {
       console.log('Game ended:', data)
-      // Game over screen will be shown via game state
     })
 
     return unsubscribe
@@ -303,7 +287,9 @@ const GamePage: React.FC = () => {
     return <pixiContainer>{gridLines}</pixiContainer>
   }
 
-  if (!roomState || !localPlayerRow || !localPlayer) {
+  const isFinished = roomState?.status === GameStatus.FINISHED
+
+  if (!roomState || (!isFinished && (!localPlayerRow || !localPlayer || !localPlayerId))) {
     return (
       <div className='w-screen h-screen flex items-center justify-center bg-[#0F0F23] text-white'>
         <div className='text-center flex flex-col items-center gap-5'>

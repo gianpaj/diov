@@ -8,15 +8,28 @@ interface GameOverScreenProps {
 }
 
 const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
-  const { gameState, localPlayer } = useGameStore()
+  const { gameState, localPlayer, localPlayerId, playerResultRows, localPlayerResultRow } = useGameStore()
 
-  if (!gameState || !localPlayer) return null
+  if (!gameState || !localPlayerId) return null
 
-  // Get final stats
-  const allPlayers = Object.values(gameState.players).sort((a, b) => b.size - a.size)
-  const playerRank = allPlayers.findIndex(p => p.id === localPlayer.id) + 1
-  const isWinner = playerRank === 1 && localPlayer.isAlive
-  const totalPlayers = allPlayers.length
+  const persistedResults = Object.values(playerResultRows).sort((a, b) => a.placement - b.placement)
+  const fallbackPlayers = Object.values(gameState.players)
+    .sort((a, b) => b.size - a.size)
+    .map((player, index) => ({
+      playerId: player.id,
+      name: player.name,
+      color: player.color,
+      placement: index + 1,
+      finalSize: player.size,
+      finalScore: player.score,
+      wasWinner: gameState.winner === player.id,
+    }))
+  const standings = persistedResults.length > 0 ? persistedResults : fallbackPlayers
+  const localStanding = standings.find(player => player.playerId === localPlayerId) ?? null
+  const playerRank = localStanding?.placement ?? standings.length + 1
+  const isWinner = gameState.winner === localPlayerId
+  const totalPlayers = standings.length
+  const finalSize = localPlayerResultRow?.finalSize ?? localPlayer?.size ?? 0
 
   // Calculate game duration
   const gameDuration = gameState.endTime ? gameState.endTime - gameState.startTime : 0
@@ -62,7 +75,9 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
           <p className='text-white/80 text-[1.1em] m-0'>
             {isWinner
               ? 'You are the last circle standing!'
-              : `You finished ${playerRank}${getOrdinalSuffix(playerRank)} place`}
+              : localStanding
+                ? `You finished ${playerRank}${getOrdinalSuffix(playerRank)} place`
+                : 'You were eliminated before the final showdown'}
           </p>
         </div>
 
@@ -75,7 +90,7 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
               </div>
               <div className='text-left'>
                 <div className='text-2xl font-bold text-accent-teal leading-none'>
-                  #{playerRank}
+                  {localStanding ? `#${playerRank}` : 'OUT'}
                 </div>
                 <div className='text-[0.85em] text-white/60 mt-0.5'>Final Rank</div>
               </div>
@@ -86,7 +101,7 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
                 <div
                   className='rounded-full'
                   style={{
-                    backgroundColor: localPlayer.color,
+                    backgroundColor: localPlayerResultRow?.color ?? localPlayer?.color ?? '#ffffff',
                     width: '24px',
                     height: '24px',
                   }}
@@ -94,7 +109,7 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
               </div>
               <div className='text-left'>
                 <div className='text-2xl font-bold text-white leading-none'>
-                  {Math.round(localPlayer.size)}
+                  {Math.round(finalSize)}
                 </div>
                 <div className='text-[0.85em] text-white/60 mt-0.5'>Final Size</div>
               </div>
@@ -127,16 +142,16 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
           <div className='bg-white/5 rounded-[15px] p-5 border border-white/10'>
             <h3 className='text-white mb-[15px] text-[1.2em]'>Final Leaderboard</h3>
             <div className='flex flex-col gap-2 max-h-[200px] overflow-y-auto'>
-              {allPlayers.slice(0, 8).map((player, index) => (
+              {standings.slice(0, 8).map(player => (
                 <div
-                  key={player.id}
+                  key={player.playerId}
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 bg-white/[0.03] rounded-lg',
-                    player.id === localPlayer.id &&
+                    player.playerId === localPlayerId &&
                       'bg-[rgba(78,205,196,0.1)] border border-[rgba(78,205,196,0.3)]'
                   )}
                 >
-                  <div className='font-bold text-white/80 min-w-7.5 text-left'>#{index + 1}</div>
+                  <div className='font-bold text-white/80 min-w-7.5 text-left'>#{player.placement}</div>
                   <div className='shrink-0'>
                     <div
                       className='w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm'
@@ -148,16 +163,16 @@ const GameOverScreen: React.FC<GameOverScreenProps> = ({ onRestart }) => {
                   <div className='flex-1 text-left'>
                     <div className='text-white font-semibold text-[0.9em] flex items-center gap-1.5'>
                       {player.name}
-                      {player.id === localPlayer.id && (
+                      {player.playerId === localPlayerId && (
                         <span className='text-accent-teal text-xs font-normal'>(You)</span>
                       )}
                     </div>
                     <div className='text-white/50 text-[0.75em]'>
-                      {player.isAlive ? 'Alive' : 'Eliminated'}
+                      {'wasWinner' in player && player.wasWinner ? 'Winner' : 'Eliminated'}
                     </div>
                   </div>
                   <div className='text-white/70 font-bold text-[0.9em]'>
-                    {Math.round(player.size)}
+                    {Math.round(player.finalSize)}
                   </div>
                 </div>
               ))}

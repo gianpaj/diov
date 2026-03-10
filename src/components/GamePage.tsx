@@ -14,7 +14,7 @@ import VirtualJoystick from '@/components/game/VirtualJoystick'
 import GameHUD from '@/components/game/GameHUD'
 import ActionButtons from '@/components/game/ActionButtons'
 import GameOverScreen from '@/components/game/GameOverScreen'
-import type { KnibbleRowState, PlayerRowState, SpitBlobRowState } from '@/types'
+import type { KnibbleRowState, PlayerRowState, SpitBlobRowState, Vector2D } from '@/types'
 
 const PLAYER_RENDER_PALETTE = [
   { base: '#D9DCE3', edge: '#2E90FF', highlight: '#F6F8FC', texture: '#A8D4FF' },
@@ -36,6 +36,7 @@ const KNIBBLE_RENDER_PALETTE = [
 const GROWTH_PULSE_DURATION_MS = 180
 const GROWTH_PULSE_MAX_SCALE = 0.18
 const MOUSE_DEAD_ZONE_PX = GAME_CONSTANTS.JOYSTICK_MAX_DISTANCE * GAME_CONSTANTS.JOYSTICK_DEAD_ZONE
+const SHOW_BACKGROUND_GRID = false
 
 const hashString = (value: string): number => {
   let hash = 0
@@ -62,46 +63,36 @@ const GamePage: React.FC = () => {
   const [isPaused, setIsPaused] = useState(false)
   const [hasFinePointer, setHasFinePointer] = useState(false)
   const [hasCoarsePointer, setHasCoarsePointer] = useState(false)
+  const [cameraPosition, setCameraPosition] = useState<Vector2D>({ x: 0, y: 0 })
   const [dimensions, setDimensions] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
   })
 
-  const {
-    roomState,
-    playerRows,
-    knibbleRows,
-    spitBlobRows,
-    localPlayer,
-    localPlayerRow,
-    localPlayerResultRow,
-    localPlayerId,
-    camera,
-    isGameActive,
-    playerInput,
-    updateCamera,
-    setMovementInput,
-    setSplitPressed,
-    setSpitPressed,
-  } = useGameStore()
+  const roomState = useGameStore(state => state.roomState)
+  const playerRows = useGameStore(state => state.playerRows)
+  const knibbleRows = useGameStore(state => state.knibbleRows)
+  const spitBlobRows = useGameStore(state => state.spitBlobRows)
+  const localPlayer = useGameStore(state => state.localPlayer)
+  const localPlayerRow = useGameStore(state => state.localPlayerRow)
+  const localPlayerResultRow = useGameStore(state => state.localPlayerResultRow)
+  const localPlayerId = useGameStore(state => state.localPlayerId)
+  const isGameActive = useGameStore(state => state.isGameActive)
+  const setSplitPressed = useGameStore(state => state.setSplitPressed)
+  const setSpitPressed = useGameStore(state => state.setSpitPressed)
 
   const { sendPlayerInput, sendSplit, sendSpit, onGameEnded, leaveGame } = useSocketStore()
 
-  // Ref used to throttle sendPlayerInput — avoids flooding the socket on every
-  // render frame. We target NETWORK_UPDATE_RATE (20 Hz = 50 ms between sends).
-  const lastInputSentAt = useRef(0)
-
-  // Stable ref to current camera so the camera-follow effect does not need
-  // `camera` in its dependency array (which would cause an infinite loop).
-  const cameraRef = useRef(camera)
+  const cameraPositionRef = useRef(cameraPosition)
+  const movementRef = useRef<Vector2D>({ x: 0, y: 0 })
   const previousPlayerSizesRef = useRef<Record<string, number>>({})
   const growthPulsesRef = useRef<Record<string, number>>({})
   const growthAnimationFrameRef = useRef<number | null>(null)
   const lastInputModeRef = useRef<'mouse' | 'touch'>('mouse')
   const [, setGrowthAnimationTick] = useState(0)
   useEffect(() => {
-    cameraRef.current = camera
-  })
+    cameraPositionRef.current = cameraPosition
+  }, [cameraPosition])
 
   const {
     direction,
@@ -152,45 +143,39 @@ const GamePage: React.FC = () => {
   // Handle joystick input
   useEffect(() => {
     if (canControlLocalPlayer && shouldShowJoystick && lastInputModeRef.current !== 'mouse') {
-      setMovementInput(direction)
+      movementRef.current = direction
     }
-  }, [canControlLocalPlayer, direction, setMovementInput, shouldShowJoystick])
+  }, [canControlLocalPlayer, direction, shouldShowJoystick])
 
-  // Send player input to server — throttled to NETWORK_UPDATE_RATE (20 Hz).
   useEffect(() => {
-    if (!canControlLocalPlayer || !localPlayerRow) return
+    if (!canControlLocalPlayer || !localPlayerRow) {
+      return
+    }
 
-    const now = Date.now()
-    const interval = 1000 / GAME_CONSTANTS.NETWORK_UPDATE_RATE // 50 ms at 20 Hz
-    if (now - lastInputSentAt.current < interval) return
+    const intervalId = window.setInterval(() => {
+      sendPlayerInput({
+        movement: movementRef.current,
+        splitPressed: false,
+        spitPressed: false,
+      })
+    }, 1000 / GAME_CONSTANTS.NETWORK_UPDATE_RATE)
 
-    lastInputSentAt.current = now
-    sendPlayerInput({
-      movement: playerInput.movement,
-      splitPressed: false,
-      spitPressed: false,
-    })
-  }, [canControlLocalPlayer, localPlayerRow, playerInput.movement, sendPlayerInput])
+    return () => window.clearInterval(intervalId)
+  }, [canControlLocalPlayer, localPlayerRow, sendPlayerInput])
 
   // Update camera to follow local player.
-  // `cameraRef` is used instead of `camera` in the dep array to prevent the
-  // effect from re-running every time updateCamera writes a new camera object,
-  // which would cause an infinite update loop.
   useEffect(() => {
     if (!localPlayerRow || !roomState) return
 
-    const cam = cameraRef.current
+    const cam = cameraPositionRef.current
     const targetX = localPlayerRow.position.x
     const targetY = localPlayerRow.position.y
 
-    const newX = cam.position.x + (targetX - cam.position.x) * cam.smoothing
-    const newY = cam.position.y + (targetY - cam.position.y) * cam.smoothing
+    const newX = cam.x + (targetX - cam.x) * GAME_CONSTANTS.CAMERA_SMOOTH_FACTOR
+    const newY = cam.y + (targetY - cam.y) * GAME_CONSTANTS.CAMERA_SMOOTH_FACTOR
 
-    updateCamera({
-      position: { x: newX, y: newY },
-      target: { x: targetX, y: targetY },
-    })
-  }, [localPlayerRow, roomState, updateCamera])
+    setCameraPosition({ x: newX, y: newY })
+  }, [localPlayerRow, roomState])
 
   // Handle game end
   useEffect(() => {
@@ -278,17 +263,15 @@ const GamePage: React.FC = () => {
 
     lastInputModeRef.current = 'mouse'
 
-    const playerScreenX = localPlayerRow.position.x - camera.position.x + dimensions.width / 2
-    const playerScreenY = localPlayerRow.position.y - camera.position.y + dimensions.height / 2
+    const playerScreenX = localPlayerRow.position.x - cameraPosition.x + dimensions.width / 2
+    const playerScreenY = localPlayerRow.position.y - cameraPosition.y + dimensions.height / 2
     const deltaX = event.clientX - playerScreenX
     const deltaY = event.clientY - playerScreenY
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
 
     if (distance <= MOUSE_DEAD_ZONE_PX) {
       const nextDirection = { x: 0, y: 0 }
-      if (canControlLocalPlayer) {
-        setMovementInput(nextDirection)
-      }
+      movementRef.current = nextDirection
       return
     }
 
@@ -301,9 +284,7 @@ const GamePage: React.FC = () => {
       y: Math.sin(angle) * normalizedMagnitude,
     }
 
-    if (canControlLocalPlayer) {
-      setMovementInput(nextDirection)
-    }
+    movementRef.current = nextDirection
   }
 
   const handleMouseLeaveViewport = () => {
@@ -340,8 +321,8 @@ const GamePage: React.FC = () => {
   }
 
   const renderPlayer = (player: PlayerRowState) => {
-    const screenX = player.position.x - camera.position.x + dimensions.width / 2
-    const screenY = player.position.y - camera.position.y + dimensions.height / 2
+    const screenX = player.position.x - cameraPosition.x + dimensions.width / 2
+    const screenY = player.position.y - cameraPosition.y + dimensions.height / 2
     const visual = getPlayerVisual(player.id)
     const displaySize = player.size * getPlayerPulseScale(player.id)
     const textureSeed = hashString(player.id)
@@ -399,8 +380,8 @@ const GamePage: React.FC = () => {
 
   // Render knibble
   const renderKnibble = (knibble: KnibbleRowState) => {
-    const screenX = knibble.position.x - camera.position.x + dimensions.width / 2
-    const screenY = knibble.position.y - camera.position.y + dimensions.height / 2
+    const screenX = knibble.position.x - cameraPosition.x + dimensions.width / 2
+    const screenY = knibble.position.y - cameraPosition.y + dimensions.height / 2
     const color = getKnibbleColor(knibble.id)
     const colorNumber = hexToNumber(color)
 
@@ -424,8 +405,8 @@ const GamePage: React.FC = () => {
 
   // Render spit blob
   const renderSpitBlob = (blob: SpitBlobRowState) => {
-    const screenX = blob.position.x - camera.position.x + dimensions.width / 2
-    const screenY = blob.position.y - camera.position.y + dimensions.height / 2
+    const screenX = blob.position.x - cameraPosition.x + dimensions.width / 2
+    const screenY = blob.position.y - cameraPosition.y + dimensions.height / 2
 
     return (
       <pixiGraphics
@@ -448,8 +429,8 @@ const GamePage: React.FC = () => {
     if (!roomState) return null
 
     const bounds = roomState.bounds
-    const screenX = bounds.x - camera.position.x + dimensions.width / 2
-    const screenY = bounds.y - camera.position.y + dimensions.height / 2
+    const screenX = bounds.x - cameraPosition.x + dimensions.width / 2
+    const screenY = bounds.y - cameraPosition.y + dimensions.height / 2
 
     return (
       <pixiGraphics
@@ -470,14 +451,14 @@ const GamePage: React.FC = () => {
     const gridLines: import('react').ReactElement[] = []
 
     // Calculate visible grid lines
-    const startX = Math.floor((camera.position.x - dimensions.width / 2) / gridSize) * gridSize
-    const endX = Math.ceil((camera.position.x + dimensions.width / 2) / gridSize) * gridSize
-    const startY = Math.floor((camera.position.y - dimensions.height / 2) / gridSize) * gridSize
-    const endY = Math.ceil((camera.position.y + dimensions.height / 2) / gridSize) * gridSize
+    const startX = Math.floor((cameraPosition.x - dimensions.width / 2) / gridSize) * gridSize
+    const endX = Math.ceil((cameraPosition.x + dimensions.width / 2) / gridSize) * gridSize
+    const startY = Math.floor((cameraPosition.y - dimensions.height / 2) / gridSize) * gridSize
+    const endY = Math.ceil((cameraPosition.y + dimensions.height / 2) / gridSize) * gridSize
 
     // Vertical lines
     for (let x = startX; x <= endX; x += gridSize) {
-      const screenX = x - camera.position.x + dimensions.width / 2
+      const screenX = x - cameraPosition.x + dimensions.width / 2
       gridLines.push(
         <pixiGraphics
           key={`v-${x}`}
@@ -495,7 +476,7 @@ const GamePage: React.FC = () => {
 
     // Horizontal lines
     for (let y = startY; y <= endY; y += gridSize) {
-      const screenY = y - camera.position.y + dimensions.height / 2
+      const screenY = y - cameraPosition.y + dimensions.height / 2
       gridLines.push(
         <pixiGraphics
           key={`h-${y}`}
@@ -546,7 +527,7 @@ const GamePage: React.FC = () => {
       >
         <pixiContainer>
           {/* Background grid */}
-          {renderGrid()}
+          {SHOW_BACKGROUND_GRID && renderGrid()}
 
           {/* Game boundaries */}
           {renderBoundaries()}

@@ -9,8 +9,12 @@ import {
   type GameConfig,
   type GameState,
   GameStatus,
+  type KnibbleRowState,
   type Player,
   type PlayerInput,
+  type PlayerRowState,
+  type RoomState,
+  type SpitBlobRowState,
   type UIState,
   type Vector2D,
 } from '@/types'
@@ -18,7 +22,12 @@ import {
 interface GameStore {
   // Game State
   gameState: GameState | null
+  roomState: RoomState | null
+  playerRows: Record<string, PlayerRowState>
+  knibbleRows: Record<string, KnibbleRowState>
+  spitBlobRows: Record<string, SpitBlobRowState>
   localPlayer: Player | null
+  localPlayerRow: PlayerRowState | null
   localPlayerId: string | null
   playerInput: PlayerInput
   camera: Camera
@@ -27,6 +36,12 @@ interface GameStore {
 
   // Actions
   setGameState: (state: GameState) => void
+  setAuthoritativeState: (state: {
+    room: RoomState | null
+    players: Record<string, PlayerRowState>
+    knibbles: Record<string, KnibbleRowState>
+    spitBlobs: Record<string, SpitBlobRowState>
+  }) => void
   setLocalPlayer: (player: Player) => void
   setLocalPlayerId: (id: string) => void
   updatePlayerInput: (input: Partial<PlayerInput>) => void
@@ -93,7 +108,12 @@ export const useGameStore = create<GameStore>()(
   subscribeWithSelector((set, get) => ({
     // Initial State
     gameState: null,
+    roomState: null,
+    playerRows: {},
+    knibbleRows: {},
+    spitBlobRows: {},
     localPlayer: null,
+    localPlayerRow: null,
     localPlayerId: null,
     playerInput: defaultPlayerInput,
     camera: defaultCamera,
@@ -111,6 +131,20 @@ export const useGameStore = create<GameStore>()(
       }
     },
 
+    setAuthoritativeState: ({ room, players, knibbles, spitBlobs }) => {
+      set({
+        roomState: room,
+        playerRows: players,
+        knibbleRows: knibbles,
+        spitBlobRows: spitBlobs,
+      })
+
+      const { localPlayerId } = get()
+      if (localPlayerId) {
+        set({ localPlayerRow: players[localPlayerId] ?? null })
+      }
+    },
+
     setLocalPlayer: (player: Player) => {
       set({ localPlayer: player, localPlayerId: player.id })
     },
@@ -118,10 +152,13 @@ export const useGameStore = create<GameStore>()(
     setLocalPlayerId: (id: string) => {
       set({ localPlayerId: id })
 
-      // Update local player if game state exists
-      const { gameState } = get()
+      // Update local player if game state / authoritative state exists
+      const { gameState, playerRows } = get()
       if (gameState && gameState.players[id]) {
         set({ localPlayer: gameState.players[id] })
+      }
+      if (playerRows[id]) {
+        set({ localPlayerRow: playerRows[id] })
       }
     },
 
@@ -146,7 +183,12 @@ export const useGameStore = create<GameStore>()(
     resetGame: () => {
       set({
         gameState: null,
+        roomState: null,
+        playerRows: {},
+        knibbleRows: {},
+        spitBlobRows: {},
         localPlayer: null,
+        localPlayerRow: null,
         localPlayerId: null,
         playerInput: defaultPlayerInput,
         camera: defaultCamera,
@@ -236,7 +278,12 @@ export const useGameContext = () => {
 // Selectors for optimized subscriptions
 export const gameSelectors = {
   gameState: (state: ReturnType<typeof useGameStore.getState>) => state.gameState,
+  roomState: (state: ReturnType<typeof useGameStore.getState>) => state.roomState,
+  playerRows: (state: ReturnType<typeof useGameStore.getState>) => state.playerRows,
+  knibbleRows: (state: ReturnType<typeof useGameStore.getState>) => state.knibbleRows,
+  spitBlobRows: (state: ReturnType<typeof useGameStore.getState>) => state.spitBlobRows,
   localPlayer: (state: ReturnType<typeof useGameStore.getState>) => state.localPlayer,
+  localPlayerRow: (state: ReturnType<typeof useGameStore.getState>) => state.localPlayerRow,
   playerInput: (state: ReturnType<typeof useGameStore.getState>) => state.playerInput,
   camera: (state: ReturnType<typeof useGameStore.getState>) => state.camera,
   uiState: (state: ReturnType<typeof useGameStore.getState>) => state.uiState,
@@ -253,7 +300,9 @@ export const gameSelectors = {
 
 // Custom hooks for common operations
 export const useLocalPlayer = () => useGameStore(gameSelectors.localPlayer)
+export const useLocalPlayerRow = () => useGameStore(gameSelectors.localPlayerRow)
 export const useGameState = () => useGameStore(gameSelectors.gameState)
+export const useRoomState = () => useGameStore(gameSelectors.roomState)
 export const usePlayerInput = () => useGameStore(gameSelectors.playerInput)
 export const useCamera = () => useGameStore(gameSelectors.camera)
 export const useUIState = () => useGameStore(gameSelectors.uiState)

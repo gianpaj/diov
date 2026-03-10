@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Clock, Play, ArrowLeft, Wifi, WifiOff } from 'lucide-react'
+import { Users, Play, ArrowLeft, Wifi, WifiOff, Clock } from 'lucide-react'
 import { useSocketStore } from '@/stores/SocketStore'
 import { useGameStore } from '@/stores/GameStore'
 import { GameStatus } from '@/types'
@@ -13,61 +13,44 @@ const WaitingRoom: React.FC = () => {
     socketId,
     isConnected,
     connectionStatus,
-    onGameStateUpdate,
-    onGameStarted,
     leaveGame,
     startGame,
   } = useSocketStore()
 
-  const { gameState, uiState, updateUIState, gameConfig, setLocalPlayerId } = useGameStore()
+  const { roomState, playerRows, uiState, updateUIState, gameConfig, setLocalPlayerId } =
+    useGameStore()
 
-  // Derive the player list directly from the Zustand store's gameState rather
-  // than a separate local useState. This avoids a race where the game_state
-  // packet arrives before the useEffect listener is registered (effects run
-  // after the first paint, but the server sends game_state immediately on join).
-  const players = useMemo(() => (gameState ? Object.values(gameState.players) : []), [gameState])
+  const players = useMemo(() => Object.values(playerRows), [playerRows])
 
-  // Derive player count and host status from local list + game state
   const playerCount = players.length
-  const minPlayers = gameConfig.minPlayers
-  const maxPlayers = gameConfig.maxPlayers
+  const minPlayers = roomState?.minPlayers ?? gameConfig.minPlayers
+  const maxPlayers = roomState?.maxPlayers ?? gameConfig.maxPlayers
   const canStartGame = playerCount >= minPlayers
-  // Use socket id to determine if this client is the host.
-  // Falls back to false (not undefined) so the Start button never shows for guests.
-  const hostId = gameState?.hostId
+  const hostId = roomState?.hostId
   const isHost = Boolean(socketId && hostId && socketId === hostId)
 
   useEffect(() => {
-    // Set up socket event listeners
-    const unsubscribeGameState = onGameStateUpdate(state => {
-      // If game is starting, show countdown
-      if (state.status === GameStatus.STARTING) {
-        const timeUntilStart = state.startTime - Date.now()
-        if (timeUntilStart > 0) {
-          setCountdown(Math.ceil(timeUntilStart / 1000))
-        }
-      }
-
-      // If game is playing, resolve the local player then navigate.
-      if (state.status === GameStatus.PLAYING) {
-        if (socketId) {
-          setLocalPlayerId(socketId)
-        }
-        navigate('/game')
-      }
-    })
-
-    const unsubscribeGameStarted = onGameStarted(data => {
-      // Just drive the visible countdown — navigation is handled exclusively
-      // by the onGameStateUpdate handler when status flips to PLAYING.
-      setCountdown(data.countdown)
-    })
-
-    return () => {
-      unsubscribeGameState()
-      unsubscribeGameStarted()
+    if (!roomState) {
+      return
     }
-  }, [onGameStateUpdate, onGameStarted, navigate])
+
+    if (roomState.status === GameStatus.STARTING && roomState.countdownEndsAt) {
+      const timeUntilStart = roomState.countdownEndsAt - Date.now()
+      setCountdown(timeUntilStart > 0 ? Math.ceil(timeUntilStart / 1000) : null)
+      return
+    }
+
+    if (roomState.status === GameStatus.PLAYING) {
+      setCountdown(null)
+      if (socketId) {
+        setLocalPlayerId(socketId)
+      }
+      navigate('/game')
+      return
+    }
+
+    setCountdown(null)
+  }, [roomState, socketId, setLocalPlayerId, navigate])
 
   // Countdown effect
   useEffect(() => {
@@ -98,7 +81,7 @@ const WaitingRoom: React.FC = () => {
     if (playerCount < minPlayers) {
       return `Waiting for ${minPlayers - playerCount} more players...`
     }
-    if (gameState?.status === GameStatus.STARTING) {
+    if (roomState?.status === GameStatus.STARTING) {
       return 'Game starting soon!'
     }
     return 'Ready to start!'

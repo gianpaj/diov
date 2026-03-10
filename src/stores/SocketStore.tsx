@@ -6,13 +6,17 @@ import {
   type GameEndedMessage,
   type GameState,
   type GameStartedMessage,
+  type KnibbleRowState,
   type KnibbleSpawnedMessage,
   type Player,
   type PlayerEatenMessage,
   type PlayerInput,
   type PlayerJoinedMessage,
   type PlayerLeftMessage,
+  type PlayerRowState,
+  type RoomState,
   type SocketMessage,
+  type SpitBlobRowState,
   ConnectionStatus,
   GameStatus,
   type KnibbleState,
@@ -44,90 +48,137 @@ const emitTo = <T,>(listeners: Set<(data: T) => void>, data: T) => {
 const toMillis = (value?: bigint | null): number | undefined =>
   value === undefined || value === null ? undefined : Number(value)
 
-const toPlayerState = (row: any) => ({
+const toRoomState = (row: any): RoomState => ({
+  id: row.id,
+  status: row.status as RoomState['status'],
+  hostId: row.hostIdentity?.toHexString(),
+  countdownEndsAt: toMillis(row.countdownEndsAt),
+  startedAt: toMillis(row.startedAt),
+  endedAt: toMillis(row.endedAt),
+  durationMs: row.durationMs,
+  maxPlayers: row.maxPlayers,
+  minPlayers: row.minPlayers,
+  winnerId: row.winnerIdentity?.toHexString(),
+  lastUpdateAt: Number(row.lastUpdateAt),
+  bounds: {
+    x: row.boundsX,
+    y: row.boundsY,
+    width: row.boundsWidth,
+    height: row.boundsHeight,
+  },
+})
+
+const toPlayerRowState = (row: any): PlayerRowState => ({
   id: row.identity.toHexString(),
+  roomId: row.roomId,
   name: row.name,
   position: { x: row.x, y: row.y },
   velocity: { x: row.velX, y: row.velY },
+  input: { x: row.inputX, y: row.inputY },
   size: row.radius,
   color: row.color,
-  isAlive: row.isAlive,
   score: row.score,
+  isAlive: row.isAlive,
   lastSplitTime: Number(row.lastSplitAt),
   lastSpitTime: Number(row.lastSpitAt),
+  joinedAt: Number(row.joinedAt),
 })
 
-const toKnibbleState = (row: any): KnibbleState => ({
+const toKnibbleRowState = (row: any): KnibbleRowState => ({
   id: row.id.toString(),
+  roomId: row.roomId,
   position: { x: row.x, y: row.y },
   size: row.size,
   color: row.color,
 })
 
-const buildGameState = (connection: DbConnection, roomId: string): GameState | null => {
-  const room = [...connection.db.room.iter()].find((row: any) => row.id === roomId)
+const toSpitBlobRowState = (row: any): SpitBlobRowState => ({
+  id: row.id.toString(),
+  roomId: row.roomId,
+  playerId: row.ownerIdentity.toHexString(),
+  position: { x: row.x, y: row.y },
+  velocity: { x: row.velX, y: row.velY },
+  size: row.size,
+  color: COLORS.SPIT_BLOB,
+  createdAt: Number(row.createdAt),
+})
+
+const toPlayerState = (row: any) => ({
+  id: row.id,
+  name: row.name,
+  position: row.position,
+  velocity: row.velocity,
+  size: row.size,
+  color: row.color,
+  isAlive: row.isAlive,
+  score: row.score,
+  lastSplitTime: row.lastSplitTime,
+  lastSpitTime: row.lastSpitTime,
+})
+
+const toKnibbleState = (row: KnibbleRowState): KnibbleState => ({
+  id: row.id,
+  position: row.position,
+  size: row.size,
+  color: row.color,
+})
+
+const buildGameStateFromAuthoritative = (
+  room: RoomState | null,
+  playerRows: Record<string, PlayerRowState>,
+  knibbleRows: Record<string, KnibbleRowState>,
+  spitBlobRows: Record<string, SpitBlobRowState>
+): GameState | null => {
   if (!room) {
     return null
   }
 
-  const players = [...connection.db.player.iter()]
-    .filter((row: any) => row.roomId === roomId)
-    .reduce<Record<string, Player>>((acc, row: any) => {
-      const player = toPlayerState(row)
-      acc[player.id] = player
-      return acc
-    }, {})
+  const players = Object.values(playerRows).reduce<Record<string, Player>>((acc, row) => {
+    const player = toPlayerState(row)
+    acc[player.id] = player
+    return acc
+  }, {})
 
-  const knibbles = [...connection.db.knibble.iter()]
-    .filter((row: any) => row.roomId === roomId)
-    .reduce<Record<string, KnibbleState>>((acc, row: any) => {
-      const knibble = toKnibbleState(row)
-      acc[knibble.id] = knibble
-      return acc
-    }, {})
+  const knibbles = Object.values(knibbleRows).reduce<Record<string, KnibbleState>>((acc, row) => {
+    const knibble = toKnibbleState(row)
+    acc[knibble.id] = knibble
+    return acc
+  }, {})
 
-  const spitBlobs = [...connection.db.spitBlob.iter()]
-    .filter((row: any) => row.roomId === roomId)
-    .reduce<Record<string, GameState['spitBlobs'][string]>>((acc, row: any) => {
-      const id = row.id.toString()
-      acc[id] = {
-        id,
-        playerId: row.ownerIdentity.toHexString(),
-        position: { x: row.x, y: row.y },
-        velocity: { x: row.velX, y: row.velY },
+  const spitBlobs = Object.values(spitBlobRows).reduce<Record<string, GameState['spitBlobs'][string]>>(
+    (acc, row) => {
+      acc[row.id] = {
+        id: row.id,
+        playerId: row.playerId,
+        position: row.position,
+        velocity: row.velocity,
         size: row.size,
-        color: COLORS.SPIT_BLOB,
-        spawnTime: Number(row.createdAt),
-        despawnTime: Number(row.createdAt) + 20_000,
+        color: row.color,
+        spawnTime: row.createdAt,
+        despawnTime: row.createdAt + 20_000,
       }
       return acc
-    }, {})
+    },
+    {}
+  )
 
-  const startTime =
-    room.status === GameStatus.STARTING
-      ? Number(room.countdownEndsAt ?? 0n)
-      : Number(room.startedAt ?? 0n)
+  const startTime = room.status === GameStatus.STARTING ? room.countdownEndsAt ?? 0 : room.startedAt ?? 0
 
   return {
     id: room.id,
-    status: room.status as GameState['status'],
+    status: room.status,
     startTime,
-    endTime: toMillis(room.endedAt),
+    endTime: room.endedAt,
     duration: room.durationMs,
     maxPlayers: room.maxPlayers,
     minPlayers: room.minPlayers,
-    hostId: room.hostIdentity?.toHexString() ?? '',
-    winner: room.winnerIdentity?.toHexString(),
-    lastUpdate: Number(room.lastUpdateAt),
+    hostId: room.hostId ?? '',
+    winner: room.winnerId,
+    lastUpdate: room.lastUpdateAt,
     players,
     knibbles,
     spitBlobs,
-    bounds: {
-      x: room.boundsX,
-      y: room.boundsY,
-      width: room.boundsWidth,
-      height: room.boundsHeight,
-    },
+    bounds: room.bounds,
   }
 }
 
@@ -186,8 +237,39 @@ export const useSocketStore = create<SocketStore>((set, get) => {
     }
 
     const previous = useGameStore.getState().gameState
-    const next = buildGameState(connection, activeRoomId)
-    if (!next) {
+    const roomRow = [...connection.db.room.iter()].find((row: any) => row.id === activeRoomId)
+    const room = roomRow ? toRoomState(roomRow) : null
+    const playerRows = [...connection.db.player.iter()]
+      .filter((row: any) => row.roomId === activeRoomId)
+      .reduce<Record<string, PlayerRowState>>((acc, row: any) => {
+        const player = toPlayerRowState(row)
+        acc[player.id] = player
+        return acc
+      }, {})
+    const knibbleRows = [...connection.db.knibble.iter()]
+      .filter((row: any) => row.roomId === activeRoomId)
+      .reduce<Record<string, KnibbleRowState>>((acc, row: any) => {
+        const knibble = toKnibbleRowState(row)
+        acc[knibble.id] = knibble
+        return acc
+      }, {})
+    const spitBlobRows = [...connection.db.spitBlob.iter()]
+      .filter((row: any) => row.roomId === activeRoomId)
+      .reduce<Record<string, SpitBlobRowState>>((acc, row: any) => {
+        const spitBlob = toSpitBlobRowState(row)
+        acc[spitBlob.id] = spitBlob
+        return acc
+      }, {})
+
+    useGameStore.getState().setAuthoritativeState({
+      room,
+      players: playerRows,
+      knibbles: knibbleRows,
+      spitBlobs: spitBlobRows,
+    })
+
+    const next = buildGameStateFromAuthoritative(room, playerRows, knibbleRows, spitBlobRows)
+    if (!next || !room) {
       return
     }
 

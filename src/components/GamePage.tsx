@@ -26,7 +26,12 @@ const GamePage: React.FC = () => {
 
   const {
     gameState,
+    roomState,
+    playerRows,
+    knibbleRows,
+    spitBlobRows,
     localPlayer,
+    localPlayerRow,
     camera,
     isGameActive,
     updateCamera,
@@ -79,7 +84,7 @@ const GamePage: React.FC = () => {
 
   // Send player input to server — throttled to NETWORK_UPDATE_RATE (20 Hz).
   useEffect(() => {
-    if (!isGameActive() || !localPlayer) return
+    if (!isGameActive() || !localPlayerRow) return
 
     const now = Date.now()
     const interval = 1000 / GAME_CONSTANTS.NETWORK_UPDATE_RATE // 50 ms at 20 Hz
@@ -91,18 +96,18 @@ const GamePage: React.FC = () => {
       splitPressed: false,
       spitPressed: false,
     })
-  }, [direction, isGameActive, localPlayer, sendPlayerInput])
+  }, [direction, isGameActive, localPlayerRow, sendPlayerInput])
 
   // Update camera to follow local player.
   // `cameraRef` is used instead of `camera` in the dep array to prevent the
   // effect from re-running every time updateCamera writes a new camera object,
   // which would cause an infinite update loop.
   useEffect(() => {
-    if (!localPlayer || !gameState) return
+    if (!localPlayerRow || !roomState) return
 
     const cam = cameraRef.current
-    const targetX = localPlayer.position.x
-    const targetY = localPlayer.position.y
+    const targetX = localPlayerRow.position.x
+    const targetY = localPlayerRow.position.y
 
     const newX = cam.position.x + (targetX - cam.position.x) * cam.smoothing
     const newY = cam.position.y + (targetY - cam.position.y) * cam.smoothing
@@ -111,7 +116,7 @@ const GamePage: React.FC = () => {
       position: { x: newX, y: newY },
       target: { x: targetX, y: targetY },
     })
-  }, [localPlayer, gameState, updateCamera])
+  }, [localPlayerRow, roomState, updateCamera])
 
   // Handle game state updates
   useEffect(() => {
@@ -138,14 +143,14 @@ const GamePage: React.FC = () => {
   }, [onGameEnded])
 
   const handleSplitAction = () => {
-    if (!isGameActive() || !localPlayer) return
+    if (!isGameActive() || !localPlayerRow) return
     setSplitPressed(true)
     sendSplit()
     setTimeout(() => setSplitPressed(false), 100)
   }
 
   const handleSpitAction = () => {
-    if (!isGameActive() || !localPlayer) return
+    if (!isGameActive() || !localPlayerRow) return
     setSpitPressed(true)
     sendSpit()
     setTimeout(() => setSpitPressed(false), 100)
@@ -174,7 +179,7 @@ const GamePage: React.FC = () => {
           g.fill({ color: player.color })
 
           // Add outline for local player
-          if (player.id === localPlayer?.id) {
+          if (player.id === localPlayerRow?.id) {
             g.circle(0, 0, player.size + 2)
             g.stroke({ width: 3, color: 0xffffff, alpha: 0.8 })
           }
@@ -229,9 +234,9 @@ const GamePage: React.FC = () => {
 
   // Render game boundaries
   const renderBoundaries = () => {
-    if (!gameState) return null
+    if (!roomState) return null
 
-    const bounds = gameState.bounds
+    const bounds = roomState.bounds
     const screenX = bounds.x - camera.position.x + dimensions.width / 2
     const screenY = bounds.y - camera.position.y + dimensions.height / 2
 
@@ -298,7 +303,7 @@ const GamePage: React.FC = () => {
     return <pixiContainer>{gridLines}</pixiContainer>
   }
 
-  if (!gameState || !localPlayer) {
+  if (!roomState || !localPlayerRow || !localPlayer) {
     return (
       <div className='w-screen h-screen flex items-center justify-center bg-[#0F0F23] text-white'>
         <div className='text-center flex flex-col items-center gap-5'>
@@ -328,13 +333,13 @@ const GamePage: React.FC = () => {
           {renderBoundaries()}
 
           {/* Knibbles */}
-          {gameState.knibbles && Object.values(gameState.knibbles).map(renderKnibble)}
+          {Object.values(knibbleRows).map(renderKnibble)}
 
           {/* Spit blobs */}
-          {gameState.spitBlobs && Object.values(gameState.spitBlobs).map(renderSpitBlob)}
+          {Object.values(spitBlobRows).map(renderSpitBlob)}
 
           {/* Players */}
-          {Object.values(gameState.players)
+          {Object.values(playerRows)
             .filter(player => player.isAlive)
             .map(renderPlayer)}
         </pixiContainer>
@@ -391,7 +396,7 @@ const GamePage: React.FC = () => {
         )}
 
         {/* Game Over Screen */}
-        {gameState.status === GameStatus.FINISHED && (
+        {roomState.status === GameStatus.FINISHED && (
           <GameOverScreen onRestart={() => navigate('/')} />
         )}
       </div>

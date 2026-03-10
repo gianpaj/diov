@@ -133,6 +133,13 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
 
+function isColliding(ax: number, ay: number, ar: number, bx: number, by: number, br: number): boolean {
+  const dx = ax - bx
+  const dy = ay - by
+  const radiusSum = ar + br
+  return dx * dx + dy * dy <= radiusSum * radiusSum
+}
+
 function randomHexColor(random: () => number): string {
   return KNIBBLE_COLORS[Math.floor(random() * KNIBBLE_COLORS.length)] ?? '#FFD93D'
 }
@@ -142,7 +149,7 @@ function currentTimeMs(ctx: any): bigint {
 }
 
 function roomPlayers(ctx: any, roomId: string) {
-  return [...ctx.db.player.player_room_id_idx.filter(roomId)]
+  return [...ctx.db.player.iter()].filter((row: any) => row.roomId === roomId)
 }
 
 function roomPlayerCount(ctx: any, roomId: string): number {
@@ -262,10 +269,94 @@ function spawnKnibble(ctx: any, roomId: string) {
 }
 
 function maintainKnibbles(ctx: any, roomId: string) {
-  const current = [...ctx.db.knibble.knibble_room_id_idx.filter(roomId)].length
+  const current = [...ctx.db.knibble.iter()].filter((row: any) => row.roomId === roomId).length
   const toSpawn = Math.max(0, KNIBBLE_TARGET_COUNT - current)
   for (let i = 0; i < Math.min(toSpawn, 8); i += 1) {
     spawnKnibble(ctx, roomId)
+  }
+}
+
+function resolveKnibbleCollisions(ctx: any, roomId: string) {
+  const knibbles = [...ctx.db.knibble.iter()].filter((row: any) => row.roomId === roomId)
+  const players = roomPlayers(ctx, roomId)
+
+  for (const currentKnibble of knibbles) {
+    for (const currentPlayer of players) {
+      const latestPlayer = ctx.db.player.identity.find(currentPlayer.identity)
+      const latestKnibble = ctx.db.knibble.id.find(currentKnibble.id)
+      if (!latestPlayer || !latestKnibble || !latestPlayer.isAlive) {
+        continue
+      }
+
+      if (
+        isColliding(
+          latestPlayer.x,
+          latestPlayer.y,
+          latestPlayer.radius,
+          latestKnibble.x,
+          latestKnibble.y,
+          latestKnibble.size
+        )
+      ) {
+        ctx.db.player.identity.update({
+          ...latestPlayer,
+          radius: latestPlayer.radius + 2,
+          score: latestPlayer.score + 1,
+        })
+        ctx.db.knibble.id.delete(latestKnibble.id)
+        break
+      }
+    }
+  }
+}
+
+function resolvePlayerCollisions(ctx: any, roomId: string) {
+  const players = roomPlayers(ctx, roomId)
+
+  for (let i = 0; i < players.length; i += 1) {
+    const first = players[i]
+    const latestFirst = ctx.db.player.identity.find(first.identity)
+    if (!latestFirst || !latestFirst.isAlive) {
+      continue
+    }
+
+    for (let j = i + 1; j < players.length; j += 1) {
+      const second = players[j]
+      const latestSecond = ctx.db.player.identity.find(second.identity)
+      if (!latestSecond || !latestSecond.isAlive) {
+        continue
+      }
+
+      if (
+        !isColliding(
+          latestFirst.x,
+          latestFirst.y,
+          latestFirst.radius,
+          latestSecond.x,
+          latestSecond.y,
+          latestSecond.radius
+        )
+      ) {
+        continue
+      }
+
+      if (latestFirst.radius > latestSecond.radius * 1.1) {
+        ctx.db.player.identity.update({
+          ...latestFirst,
+          radius: latestFirst.radius + Math.round(latestSecond.radius * 0.1),
+          score: latestFirst.score + Math.round(latestSecond.radius),
+        })
+        ctx.db.player.identity.delete(latestSecond.identity)
+      } else if (latestSecond.radius > latestFirst.radius * 1.1) {
+        ctx.db.player.identity.update({
+          ...latestSecond,
+          radius: latestSecond.radius + Math.round(latestFirst.radius * 0.1),
+          score: latestSecond.score + Math.round(latestFirst.radius),
+        })
+        ctx.db.player.identity.delete(latestFirst.identity)
+        break
+      }
+    }
   }
 }
 
@@ -445,12 +536,25 @@ export const process_tick = battleCircles.reducer({ arg: gameTick.rowType }, (ct
       })
     }
 
+    resolveKnibbleCollisions(ctx, refreshedRoom.id)
+    resolvePlayerCollisions(ctx, refreshedRoom.id)
     maintainKnibbles(ctx, refreshedRoom.id)
 
-    if (refreshedRoom.startedAt && nowMs - refreshedRoom.startedAt >= BigInt(refreshedRoom.durationMs)) {
+    const remainingPlayers = roomPlayers(ctx, refreshedRoom.id)
+    if (remainingPlayers.length <= 1) {
       updateRoomTimestamp(ctx, refreshedRoom, {
         status: 'finished',
         endedAt: nowMs,
+        winnerIdentity: remainingPlayers[0]?.identity,
+      })
+    } else if (
+      refreshedRoom.startedAt &&
+      nowMs - refreshedRoom.startedAt >= BigInt(refreshedRoom.durationMs)
+    ) {
+      updateRoomTimestamp(ctx, refreshedRoom, {
+        status: 'finished',
+        endedAt: nowMs,
+        winnerIdentity: undefined,
       })
     }
   }

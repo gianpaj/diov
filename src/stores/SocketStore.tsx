@@ -1,50 +1,139 @@
-import React, { createContext, useContext, ReactNode, useEffect, useRef } from 'react'
+import React, { createContext, useContext, type ReactNode, useEffect, useRef } from 'react'
+import { create } from 'zustand'
 import { useGameStore } from '@/stores/GameStore'
 import {
-  JOIN_GAME,
-  START_GAME,
-  LEAVE_GAME,
-  PLAYER_INPUT,
-  GAME_STATE,
-  PLAYER_JOINED,
-  PLAYER_LEFT,
-  GAME_STARTED,
-  GAME_ENDED,
-  PLAYER_EATEN,
-  KNIBBLE_SPAWNED,
-  ERROR,
-} from '@battle-circles/shared/events'
-import { create } from 'zustand'
-import { subscribeWithSelector } from 'zustand/middleware'
-import { io, Socket } from 'socket.io-client'
-import {
-  type SocketMessage,
+  type ErrorMessage,
+  type GameEndedMessage,
   type GameState,
-  ConnectionStatus,
-  type JoinGameMessage,
-  type PlayerInputMessage,
+  type GameStartedMessage,
+  type KnibbleSpawnedMessage,
+  type Player,
+  type PlayerEatenMessage,
+  type PlayerInput,
   type PlayerJoinedMessage,
   type PlayerLeftMessage,
-  type GameStartedMessage,
-  type GameEndedMessage,
-  type PlayerEatenMessage,
-  type KnibbleSpawnedMessage,
-  type ErrorMessage,
-  type PlayerInput,
+  type SocketMessage,
+  ConnectionStatus,
+  GameStatus,
+  type KnibbleState,
+  COLORS,
 } from '@/types'
+import { DbConnection, type ErrorContext, type SubscriptionHandle } from '@/module_bindings'
 
-// For MVP all players land in the same room — matches DEFAULT_ROOM_ID in socket.ts
 const DEFAULT_ROOM_ID = 'global'
-
-const DEFAULT_SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001'
+const DEFAULT_SPACETIMEDB_HOST = import.meta.env.VITE_SPACETIMEDB_HOST || 'ws://localhost:3000'
+const DEFAULT_SPACETIMEDB_DB_NAME = import.meta.env.VITE_SPACETIMEDB_DB_NAME || 'battle-circles'
 
 const MAX_RECONNECT_ATTEMPTS = 5
 const INITIAL_RECONNECT_DELAY = 1000
-const PING_INTERVAL = 5000
+const AUTH_TOKEN_KEY = 'spacetimedb_token'
+
+const gameStateListeners = new Set<(state: GameState) => void>()
+const playerJoinedListeners = new Set<(data: PlayerJoinedMessage['data']) => void>()
+const playerLeftListeners = new Set<(data: PlayerLeftMessage['data']) => void>()
+const gameStartedListeners = new Set<(data: GameStartedMessage['data']) => void>()
+const gameEndedListeners = new Set<(data: GameEndedMessage['data']) => void>()
+const playerEatenListeners = new Set<(data: PlayerEatenMessage['data']) => void>()
+const knibbleSpawnedListeners = new Set<(data: KnibbleSpawnedMessage['data']) => void>()
+const errorListeners = new Set<(data: ErrorMessage['data']) => void>()
+
+const emitTo = <T,>(listeners: Set<(data: T) => void>, data: T) => {
+  listeners.forEach(listener => listener(data))
+}
+
+const toMillis = (value?: bigint | null): number | undefined =>
+  value === undefined || value === null ? undefined : Number(value)
+
+const toPlayerState = (row: any) => ({
+  id: row.identity.toHexString(),
+  name: row.name,
+  position: { x: row.x, y: row.y },
+  velocity: { x: row.velX, y: row.velY },
+  size: row.radius,
+  color: row.color,
+  isAlive: row.isAlive,
+  score: row.score,
+  lastSplitTime: Number(row.lastSplitAt),
+  lastSpitTime: Number(row.lastSpitAt),
+})
+
+const toKnibbleState = (row: any): KnibbleState => ({
+  id: row.id.toString(),
+  position: { x: row.x, y: row.y },
+  size: row.size,
+  color: row.color,
+})
+
+const buildGameState = (connection: DbConnection, roomId: string): GameState | null => {
+  const room = [...connection.db.room.iter()].find((row: any) => row.id === roomId)
+  if (!room) {
+    return null
+  }
+
+  const players = [...connection.db.player.iter()]
+    .filter((row: any) => row.roomId === roomId)
+    .reduce<Record<string, Player>>((acc, row: any) => {
+      const player = toPlayerState(row)
+      acc[player.id] = player
+      return acc
+    }, {})
+
+  const knibbles = [...connection.db.knibble.iter()]
+    .filter((row: any) => row.roomId === roomId)
+    .reduce<Record<string, KnibbleState>>((acc, row: any) => {
+      const knibble = toKnibbleState(row)
+      acc[knibble.id] = knibble
+      return acc
+    }, {})
+
+  const spitBlobs = [...connection.db.spitBlob.iter()]
+    .filter((row: any) => row.roomId === roomId)
+    .reduce<Record<string, GameState['spitBlobs'][string]>>((acc, row: any) => {
+      const id = row.id.toString()
+      acc[id] = {
+        id,
+        playerId: row.ownerIdentity.toHexString(),
+        position: { x: row.x, y: row.y },
+        velocity: { x: row.velX, y: row.velY },
+        size: row.size,
+        color: COLORS.SPIT_BLOB,
+        spawnTime: Number(row.createdAt),
+        despawnTime: Number(row.createdAt) + 20_000,
+      }
+      return acc
+    }, {})
+
+  const startTime =
+    room.status === GameStatus.STARTING
+      ? Number(room.countdownEndsAt ?? 0n)
+      : Number(room.startedAt ?? 0n)
+
+  return {
+    id: room.id,
+    status: room.status as GameState['status'],
+    startTime,
+    endTime: toMillis(room.endedAt),
+    duration: room.durationMs,
+    maxPlayers: room.maxPlayers,
+    minPlayers: room.minPlayers,
+    hostId: room.hostIdentity?.toHexString() ?? '',
+    winner: room.winnerIdentity?.toHexString(),
+    lastUpdate: Number(room.lastUpdateAt),
+    players,
+    knibbles,
+    spitBlobs,
+    bounds: {
+      x: room.boundsX,
+      y: room.boundsY,
+      width: room.boundsWidth,
+      height: room.boundsHeight,
+    },
+  }
+}
 
 interface SocketStore {
-  // Connection State
-  socket: Socket | null
+  connection: DbConnection | null
+  subscription: SubscriptionHandle | null
   socketId: string | null
   isConnected: boolean
   connectionStatus: ConnectionStatus
@@ -53,16 +142,12 @@ interface SocketStore {
   reconnectDelay: number
   lastPingTime: number
   latency: number
-  /** ReturnType of setInterval for the ping loop — stored here instead of
-   *  on socket.data to avoid a TypeScript error. */
-  pingIntervalId: ReturnType<typeof setInterval> | null
+  activeRoomId: string
 
-  // Connection Actions
   connect: (serverUrl?: string) => void
   disconnect: () => void
   reconnect: () => void
 
-  // Game Actions
   joinGame: (playerName: string) => void
   leaveGame: () => void
   startGame: () => void
@@ -71,7 +156,6 @@ interface SocketStore {
   sendSpit: () => void
   sendMessage: (message: SocketMessage) => void
 
-  // Event Handlers (each returns an unsubscribe function)
   onGameStateUpdate: (callback: (state: GameState) => void) => () => void
   onPlayerJoined: (callback: (data: PlayerJoinedMessage['data']) => void) => () => void
   onPlayerLeft: (callback: (data: PlayerLeftMessage['data']) => void) => () => void
@@ -81,7 +165,6 @@ interface SocketStore {
   onKnibbleSpawned: (callback: (data: KnibbleSpawnedMessage['data']) => void) => () => void
   onError: (callback: (data: ErrorMessage['data']) => void) => () => void
 
-  // Internal Actions
   setConnectionStatus: (status: ConnectionStatus) => void
   updateLatency: (latency: number) => void
   incrementReconnectAttempts: () => void
@@ -90,10 +173,100 @@ interface SocketStore {
   stopPingMonitoring: () => void
 }
 
-export const useSocketStore = create<SocketStore>()(
-  subscribeWithSelector((set, get) => ({
-    // ── Initial State ──────────────────────────────────────────────────────
-    socket: null,
+export const useSocketStore = create<SocketStore>((set, get) => {
+  const emitError = (message: string, code: ErrorMessage['data']['code'] = 'UNKNOWN') => {
+    const payload = { message, code }
+    emitTo(errorListeners, payload)
+  }
+
+  const syncAuthoritativeState = () => {
+    const { connection, activeRoomId } = get()
+    if (!connection) {
+      return
+    }
+
+    const previous = useGameStore.getState().gameState
+    const next = buildGameState(connection, activeRoomId)
+    if (!next) {
+      return
+    }
+
+    useGameStore.getState().setGameState(next)
+    emitTo(gameStateListeners, next)
+
+    if (previous) {
+      const previousPlayerIds = new Set(Object.keys(previous.players))
+      const nextPlayerIds = new Set(Object.keys(next.players))
+
+      nextPlayerIds.forEach(id => {
+        if (!previousPlayerIds.has(id)) {
+          emitTo(playerJoinedListeners, {
+            player: next.players[id],
+            playerCount: nextPlayerIds.size,
+          })
+        }
+      })
+
+      previousPlayerIds.forEach(id => {
+        if (!nextPlayerIds.has(id)) {
+          emitTo(playerLeftListeners, {
+            playerId: id,
+            playerCount: nextPlayerIds.size,
+            reason: previous.status === GameStatus.PLAYING ? 'eliminated' : 'left',
+          })
+        }
+      })
+
+      const previousKnibbles = new Set(Object.keys(previous.knibbles))
+      Object.keys(next.knibbles).forEach(id => {
+        if (!previousKnibbles.has(id)) {
+          emitTo(knibbleSpawnedListeners, { knibble: next.knibbles[id] })
+        }
+      })
+    }
+
+    if (next.status === GameStatus.STARTING && previous?.status !== GameStatus.STARTING) {
+      const countdown = Math.max(0, Math.ceil((next.startTime - Date.now()) / 1000))
+      emitTo(gameStartedListeners, {
+        gameState: next,
+        countdown,
+      })
+    }
+
+    if (next.status === GameStatus.FINISHED && previous?.status !== GameStatus.FINISHED) {
+      emitTo(gameEndedListeners, {
+        winner: next.winner ? next.players[next.winner] ?? null : null,
+        finalState: next,
+      })
+    }
+  }
+
+  const installTableListeners = (connection: DbConnection) => {
+    connection.db.room.onInsert(syncAuthoritativeState)
+    connection.db.room.onUpdate(syncAuthoritativeState)
+    connection.db.room.onDelete(syncAuthoritativeState)
+    connection.db.player.onInsert(syncAuthoritativeState)
+    connection.db.player.onUpdate((_ctx, oldPlayer: any, newPlayer: any) => {
+      if (oldPlayer.isAlive && !newPlayer.isAlive) {
+        emitTo(playerEatenListeners, {
+          eaterId: '',
+          victimId: newPlayer.identity.toHexString(),
+        })
+      }
+      syncAuthoritativeState()
+    })
+    connection.db.player.onDelete(syncAuthoritativeState)
+    connection.db.knibble.onInsert(syncAuthoritativeState)
+    connection.db.knibble.onUpdate(syncAuthoritativeState)
+    connection.db.knibble.onDelete(syncAuthoritativeState)
+    connection.db.spitBlob.onInsert(syncAuthoritativeState)
+    connection.db.spitBlob.onUpdate(syncAuthoritativeState)
+    connection.db.spitBlob.onDelete(syncAuthoritativeState)
+  }
+
+  return {
+    connection: null,
+    subscription: null,
     socketId: null,
     isConnected: false,
     connectionStatus: ConnectionStatus.DISCONNECTED,
@@ -102,296 +275,215 @@ export const useSocketStore = create<SocketStore>()(
     reconnectDelay: INITIAL_RECONNECT_DELAY,
     lastPingTime: 0,
     latency: 0,
-    pingIntervalId: null,
+    activeRoomId: DEFAULT_ROOM_ID,
 
-    // ── Connection Actions ─────────────────────────────────────────────────
-
-    connect: (serverUrl = DEFAULT_SERVER_URL) => {
-      const { socket, isConnected } = get()
-
-      if (socket && isConnected) {
-        console.warn('Socket already connected')
+    connect: (serverUrl = DEFAULT_SPACETIMEDB_HOST) => {
+      const { connection, isConnected } = get()
+      if (connection && isConnected) {
         return
       }
 
-      console.log('Connecting to server:', serverUrl)
       set({ connectionStatus: ConnectionStatus.CONNECTING })
 
-      const newSocket = io(serverUrl, {
-        transports: ['websocket', 'polling'],
-        timeout: 10000,
-        forceNew: true,
-        reconnection: false, // manual reconnection handled below
-      })
+      const builder = DbConnection.builder()
+        .withUri(serverUrl)
+        .withDatabaseName(DEFAULT_SPACETIMEDB_DB_NAME)
+        .withToken(localStorage.getItem(AUTH_TOKEN_KEY) || undefined)
+        .onConnect((conn, identity, token) => {
+          localStorage.setItem(AUTH_TOKEN_KEY, token)
+          installTableListeners(conn)
 
-      newSocket.on('connect', () => {
-        console.log('Socket connected:', newSocket.id)
-        set({
-          socket: newSocket,
-          socketId: newSocket.id ?? null,
-          isConnected: true,
-          connectionStatus: ConnectionStatus.CONNECTED,
+          const subscription = conn
+            .subscriptionBuilder()
+            .onApplied(() => {
+              syncAuthoritativeState()
+            })
+            .onError((ctx: ErrorContext) => {
+              emitError(ctx.event?.message || 'Subscription failed')
+            })
+            .subscribe([
+              'SELECT * FROM room',
+              'SELECT * FROM player',
+              'SELECT * FROM knibble',
+              'SELECT * FROM spit_blob',
+            ])
+
+          set({
+            connection: conn,
+            subscription,
+            socketId: identity.toHexString(),
+            isConnected: true,
+            connectionStatus: ConnectionStatus.CONNECTED,
+          })
+
+          useGameStore.getState().setLocalPlayerId(identity.toHexString())
+          get().resetReconnectAttempts()
+          syncAuthoritativeState()
         })
-        get().resetReconnectAttempts()
-        get().startPingMonitoring()
-      })
-
-      newSocket.on('disconnect', reason => {
-        console.log('Socket disconnected:', reason)
-        get().stopPingMonitoring()
-        set({
-          socketId: null,
-          isConnected: false,
-          connectionStatus: ConnectionStatus.DISCONNECTED,
+        .onDisconnect((_ctx, error) => {
+          set({
+            connection: null,
+            subscription: null,
+            socketId: null,
+            isConnected: false,
+            connectionStatus: ConnectionStatus.DISCONNECTED,
+          })
+          if (error) {
+            emitError(error.message)
+          }
+        })
+        .onConnectError((_ctx, error) => {
+          set({ connectionStatus: ConnectionStatus.ERROR })
+          emitError(error.message || 'Could not connect to SpacetimeDB')
         })
 
-        // Reconnect unless the client intentionally disconnected
-        if (reason !== 'io client disconnect') {
-          setTimeout(() => get().reconnect(), get().reconnectDelay)
-        }
-      })
-
-      newSocket.on('connect_error', error => {
-        console.error('Socket connection error:', error)
-        set({ connectionStatus: ConnectionStatus.ERROR })
-        setTimeout(() => get().reconnect(), get().reconnectDelay)
-      })
-
-      // Pong handler for round-trip latency measurement
-      newSocket.on('pong', () => {
-        const latency = Date.now() - get().lastPingTime
-        get().updateLatency(latency)
-      })
-
-      // Persist every game_state directly into GameStore the moment it
-      // arrives — regardless of whether any component has mounted and
-      // registered its own onGameStateUpdate listener yet.
-      // This is the single source of truth for game state on the frontend.
-      newSocket.on(GAME_STATE, (state: GameState) => {
-        useGameStore.getState().setGameState(state)
-      })
-
-      set({ socket: newSocket })
+      const connectionHandle = builder.build()
+      set({ connection: connectionHandle })
     },
 
     disconnect: () => {
-      get().stopPingMonitoring()
-      const { socket } = get()
-      if (socket) {
-        socket.disconnect()
-        set({
-          socket: null,
-          socketId: null,
-          isConnected: false,
-          connectionStatus: ConnectionStatus.DISCONNECTED,
-        })
-      }
+      const { connection, subscription } = get()
+      subscription?.unsubscribe()
+      connection?.disconnect()
+      set({
+        connection: null,
+        subscription: null,
+        socketId: null,
+        isConnected: false,
+        connectionStatus: ConnectionStatus.DISCONNECTED,
+      })
+      useGameStore.getState().resetGame()
     },
 
     reconnect: () => {
-      const { reconnectAttempts, maxReconnectAttempts, socket } = get()
-
+      const { reconnectAttempts, maxReconnectAttempts } = get()
       if (reconnectAttempts >= maxReconnectAttempts) {
-        console.error('Max reconnection attempts reached')
         set({ connectionStatus: ConnectionStatus.ERROR })
         return
       }
 
-      console.log(`Reconnection attempt ${reconnectAttempts + 1}/${maxReconnectAttempts}`)
       set({ connectionStatus: ConnectionStatus.RECONNECTING })
       get().incrementReconnectAttempts()
-
-      if (socket) {
-        socket.removeAllListeners()
-        socket.disconnect()
-      }
-
-      // Exponential backoff capped at 10 s
-      const delay = Math.min(get().reconnectDelay * Math.pow(2, reconnectAttempts), 10_000)
-      setTimeout(() => get().connect(), delay)
+      setTimeout(() => get().connect(), Math.min(INITIAL_RECONNECT_DELAY * 2 ** reconnectAttempts, 10_000))
     },
 
-    // ── Game Actions ───────────────────────────────────────────────────────
-
-    joinGame: (playerName: string) => {
-      const { socket, isConnected } = get()
-      if (!socket || !isConnected) {
-        console.error('Cannot join game: not connected to server')
+    joinGame: playerName => {
+      const { connection, socketId, activeRoomId } = get()
+      if (!connection || !socketId) {
+        emitError('Cannot join game: not connected')
         return
       }
 
-      // Send roomId so the backend can route to the correct room.
-      // For MVP this is always 'global'; matchmaking can change it later.
-      const message: JoinGameMessage = {
-        type: JOIN_GAME,
-        data: { playerName },
-        timestamp: Date.now(),
-      }
-
-      socket.emit(JOIN_GAME, { playerName: message.data.playerName, roomId: DEFAULT_ROOM_ID })
-    },
-
-    startGame: () => {
-      const { socket, isConnected } = get()
-      if (!socket || !isConnected) return
-      socket.emit(START_GAME)
+      set({ activeRoomId })
+      void connection.reducers
+        .joinGame({ roomId: activeRoomId, playerName })
+        .then(() => {
+          useGameStore.getState().setLocalPlayerId(socketId)
+        })
+        .catch(error => emitError(error.message || 'Failed to join game'))
     },
 
     leaveGame: () => {
-      const { socket, isConnected } = get()
-      if (!socket || !isConnected) return
-      socket.emit(LEAVE_GAME)
+      const { connection } = get()
+      if (!connection) return
+      void connection.reducers
+        .leaveGame({})
+        .catch(error => emitError(error.message || 'Failed to leave game'))
     },
 
-    sendPlayerInput: (input: PlayerInput) => {
-      const { socket, isConnected } = get()
-      if (!socket || !isConnected) return
+    startGame: () => {
+      const { connection } = get()
+      if (!connection) return
+      void connection.reducers
+        .startGame({})
+        .catch(error => emitError(error.message || 'Failed to start game'))
+    },
 
-      const message: PlayerInputMessage = {
-        type: PLAYER_INPUT,
-        data: input,
-        timestamp: Date.now(),
-      }
+    sendPlayerInput: input => {
+      const { connection } = get()
+      if (!connection) return
 
-      // Emit using the constant so it always matches the backend handler
-      socket.emit(PLAYER_INPUT, message.data)
+      void connection.reducers
+        .setInput({ x: input.movement.x, y: input.movement.y })
+        .catch(error => emitError(error.message || 'Failed to send input'))
     },
 
     sendSplit: () => {
-      const { socket, isConnected } = get()
-      if (!socket || !isConnected) return
-      socket.emit('split')
+      const { connection } = get()
+      if (!connection) return
+      void connection.reducers.split({}).catch(error => emitError(error.message || 'Failed to split'))
     },
 
     sendSpit: () => {
-      const { socket, isConnected } = get()
-      if (!socket || !isConnected) return
-      socket.emit('spit')
+      const { connection } = get()
+      if (!connection) return
+      void connection.reducers.spit({}).catch(error => emitError(error.message || 'Failed to spit'))
     },
 
-    sendMessage: (message: SocketMessage) => {
-      const { socket, isConnected } = get()
-      if (!socket || !isConnected) {
-        console.error('Cannot send message: not connected to server')
+    sendMessage: message => {
+      if (message.type === 'join_game') {
+        get().joinGame(message.data.playerName)
         return
       }
-      socket.emit(message.type, message.data)
-    },
-
-    // ── Event Handlers ─────────────────────────────────────────────────────
-
-    onGameStateUpdate: (callback: (state: GameState) => void) => {
-      const { socket } = get()
-      if (!socket) return () => {}
-      const handler = (data: GameState) => callback(data)
-      socket.on(GAME_STATE, handler)
-      return () => socket.off(GAME_STATE, handler)
-    },
-
-    onPlayerJoined: (callback: (data: PlayerJoinedMessage['data']) => void) => {
-      const { socket } = get()
-      if (!socket) return () => {}
-      const handler = (data: PlayerJoinedMessage['data']) => callback(data)
-      socket.on(PLAYER_JOINED, handler)
-      return () => socket.off(PLAYER_JOINED, handler)
-    },
-
-    onPlayerLeft: (callback: (data: PlayerLeftMessage['data']) => void) => {
-      const { socket } = get()
-      if (!socket) return () => {}
-      const handler = (data: PlayerLeftMessage['data']) => callback(data)
-      socket.on(PLAYER_LEFT, handler)
-      return () => socket.off(PLAYER_LEFT, handler)
-    },
-
-    onGameStarted: (callback: (data: GameStartedMessage['data']) => void) => {
-      const { socket } = get()
-      if (!socket) return () => {}
-      const handler = (data: GameStartedMessage['data']) => callback(data)
-      socket.on(GAME_STARTED, handler)
-      return () => socket.off(GAME_STARTED, handler)
-    },
-
-    onGameEnded: (callback: (data: GameEndedMessage['data']) => void) => {
-      const { socket } = get()
-      if (!socket) return () => {}
-      const handler = (data: GameEndedMessage['data']) => callback(data)
-      socket.on(GAME_ENDED, handler)
-      return () => socket.off(GAME_ENDED, handler)
-    },
-
-    onPlayerEaten: (callback: (data: PlayerEatenMessage['data']) => void) => {
-      const { socket } = get()
-      if (!socket) return () => {}
-      const handler = (data: PlayerEatenMessage['data']) => callback(data)
-      socket.on(PLAYER_EATEN, handler)
-      return () => socket.off(PLAYER_EATEN, handler)
-    },
-
-    onKnibbleSpawned: (callback: (data: KnibbleSpawnedMessage['data']) => void) => {
-      const { socket } = get()
-      if (!socket) return () => {}
-      const handler = (data: KnibbleSpawnedMessage['data']) => callback(data)
-      socket.on(KNIBBLE_SPAWNED, handler)
-      return () => socket.off(KNIBBLE_SPAWNED, handler)
-    },
-
-    onError: (callback: (data: ErrorMessage['data']) => void) => {
-      const { socket } = get()
-      if (!socket) return () => {}
-      const handler = (data: ErrorMessage['data']) => callback(data)
-      socket.on(ERROR, handler)
-      return () => socket.off(ERROR, handler)
-    },
-
-    // ── Internal Actions ───────────────────────────────────────────────────
-
-    setConnectionStatus: (status: ConnectionStatus) => {
-      set({ connectionStatus: status })
-    },
-
-    updateLatency: (latency: number) => {
-      set({ latency })
-    },
-
-    incrementReconnectAttempts: () => {
-      set(state => ({ reconnectAttempts: state.reconnectAttempts + 1 }))
-    },
-
-    resetReconnectAttempts: () => {
-      set({ reconnectAttempts: 0, reconnectDelay: INITIAL_RECONNECT_DELAY })
-    },
-
-    startPingMonitoring: () => {
-      // Clear any existing interval before starting a new one
-      get().stopPingMonitoring()
-
-      const { socket } = get()
-      if (!socket) return
-
-      const id = setInterval(() => {
-        if (!get().isConnected) {
-          get().stopPingMonitoring()
-          return
-        }
-        set({ lastPingTime: Date.now() })
-        socket.emit('ping')
-      }, PING_INTERVAL)
-
-      set({ pingIntervalId: id })
-    },
-
-    stopPingMonitoring: () => {
-      const { pingIntervalId } = get()
-      if (pingIntervalId !== null) {
-        clearInterval(pingIntervalId)
-        set({ pingIntervalId: null })
+      if (message.type === 'start_game') {
+        get().startGame()
+        return
+      }
+      if (message.type === 'leave_game') {
+        get().leaveGame()
       }
     },
-  }))
-)
 
-// ── React Context (thin wrapper so components can access the store) ──────────
+    onGameStateUpdate: callback => {
+      gameStateListeners.add(callback)
+      return () => gameStateListeners.delete(callback)
+    },
+
+    onPlayerJoined: callback => {
+      playerJoinedListeners.add(callback)
+      return () => playerJoinedListeners.delete(callback)
+    },
+
+    onPlayerLeft: callback => {
+      playerLeftListeners.add(callback)
+      return () => playerLeftListeners.delete(callback)
+    },
+
+    onGameStarted: callback => {
+      gameStartedListeners.add(callback)
+      return () => gameStartedListeners.delete(callback)
+    },
+
+    onGameEnded: callback => {
+      gameEndedListeners.add(callback)
+      return () => gameEndedListeners.delete(callback)
+    },
+
+    onPlayerEaten: callback => {
+      playerEatenListeners.add(callback)
+      return () => playerEatenListeners.delete(callback)
+    },
+
+    onKnibbleSpawned: callback => {
+      knibbleSpawnedListeners.add(callback)
+      return () => knibbleSpawnedListeners.delete(callback)
+    },
+
+    onError: callback => {
+      errorListeners.add(callback)
+      return () => errorListeners.delete(callback)
+    },
+
+    setConnectionStatus: status => set({ connectionStatus: status }),
+    updateLatency: latency => set({ latency }),
+    incrementReconnectAttempts: () =>
+      set(state => ({ reconnectAttempts: state.reconnectAttempts + 1 })),
+    resetReconnectAttempts: () =>
+      set({ reconnectAttempts: 0, reconnectDelay: INITIAL_RECONNECT_DELAY }),
+    startPingMonitoring: () => {},
+    stopPingMonitoring: () => {},
+  }
+})
 
 const SocketStoreContext = createContext<typeof useSocketStore | null>(null)
 
@@ -408,8 +500,6 @@ export const useSocketContext = () => {
   }
   return context()
 }
-
-// ── Auto-connection hook ─────────────────────────────────────────────────────
 
 export const useAutoConnect = (autoConnect = true) => {
   const connect = useSocketStore(state => state.connect)
@@ -433,16 +523,13 @@ export const useAutoConnect = (autoConnect = true) => {
   return { isConnected }
 }
 
-// ── Selectors ────────────────────────────────────────────────────────────────
-
 export const socketSelectors = {
   isConnected: (state: ReturnType<typeof useSocketStore.getState>) => state.isConnected,
   connectionStatus: (state: ReturnType<typeof useSocketStore.getState>) => state.connectionStatus,
   latency: (state: ReturnType<typeof useSocketStore.getState>) => state.latency,
-  reconnectAttempts: (state: ReturnType<typeof useSocketStore.getState>) => state.reconnectAttempts,
+  reconnectAttempts: (state: ReturnType<typeof useSocketStore.getState>) =>
+    state.reconnectAttempts,
 }
-
-// ── Convenience hooks ────────────────────────────────────────────────────────
 
 export const useIsConnected = () => useSocketStore(socketSelectors.isConnected)
 export const useConnectionStatus = () => useSocketStore(socketSelectors.connectionStatus)

@@ -14,6 +14,46 @@ import VirtualJoystick from '@/components/game/VirtualJoystick'
 import GameHUD from '@/components/game/GameHUD'
 import ActionButtons from '@/components/game/ActionButtons'
 import GameOverScreen from '@/components/game/GameOverScreen'
+import type { KnibbleRowState, PlayerRowState, SpitBlobRowState } from '@/types'
+
+const PLAYER_RENDER_PALETTE = [
+  { base: '#D9DCE3', edge: '#2E90FF', highlight: '#F6F8FC', texture: '#A8D4FF' },
+  { base: '#E5E0D8', edge: '#FF7A18', highlight: '#FFF4E7', texture: '#FFD1A8' },
+  { base: '#DBE7D8', edge: '#2FBF71', highlight: '#F4FFF1', texture: '#B8E8C7' },
+  { base: '#E4DAE7', edge: '#A855F7', highlight: '#FBF5FF', texture: '#D8B4FE' },
+  { base: '#E7D8DB', edge: '#F43F5E', highlight: '#FFF1F4', texture: '#F9A8B8' },
+] as const
+
+const KNIBBLE_RENDER_PALETTE = [
+  '#16F2F2',
+  '#68FF2B',
+  '#FFB11B',
+  '#FF2EA6',
+  '#1E90FF',
+  '#FFE44D',
+] as const
+
+const GROWTH_PULSE_DURATION_MS = 180
+const GROWTH_PULSE_MAX_SCALE = 0.18
+
+const hashString = (value: string): number => {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0
+  }
+  return hash
+}
+
+const hexToNumber = (hex: string): number => Number.parseInt(hex.replace('#', ''), 16)
+
+const getPlayerVisual = (playerId: string) => {
+  const hashed = hashString(playerId)
+  return PLAYER_RENDER_PALETTE[hashed % PLAYER_RENDER_PALETTE.length] ?? PLAYER_RENDER_PALETTE[0]
+}
+
+const getKnibbleColor = (knibbleId: string) =>
+  KNIBBLE_RENDER_PALETTE[hashString(knibbleId) % KNIBBLE_RENDER_PALETTE.length] ??
+  KNIBBLE_RENDER_PALETTE[0]
 
 const GamePage: React.FC = () => {
   const navigate = useNavigate()
@@ -31,6 +71,7 @@ const GamePage: React.FC = () => {
     spitBlobRows,
     localPlayer,
     localPlayerRow,
+    localPlayerResultRow,
     localPlayerId,
     camera,
     isGameActive,
@@ -49,6 +90,10 @@ const GamePage: React.FC = () => {
   // Stable ref to current camera so the camera-follow effect does not need
   // `camera` in its dependency array (which would cause an infinite loop).
   const cameraRef = useRef(camera)
+  const previousPlayerSizesRef = useRef<Record<string, number>>({})
+  const growthPulsesRef = useRef<Record<string, number>>({})
+  const growthAnimationFrameRef = useRef<number | null>(null)
+  const [, setGrowthAnimationTick] = useState(0)
   useEffect(() => {
     cameraRef.current = camera
   })
@@ -60,6 +105,10 @@ const GamePage: React.FC = () => {
     handlers: joystickHandlers,
     containerRef: joystickRef,
   } = useJoystick()
+
+  const isFinished = roomState?.status === GameStatus.FINISHED
+  const isEliminated = roomState?.status === GameStatus.PLAYING && !localPlayerRow && !!localPlayerResultRow
+  const canControlLocalPlayer = isGameActive() && !!localPlayerRow && !isEliminated
 
   // Handle window resize
   useEffect(() => {
@@ -76,14 +125,14 @@ const GamePage: React.FC = () => {
 
   // Handle joystick input
   useEffect(() => {
-    if (isGameActive()) {
+    if (canControlLocalPlayer) {
       setMovementInput(direction)
     }
-  }, [direction, isGameActive, setMovementInput])
+  }, [canControlLocalPlayer, direction, setMovementInput])
 
   // Send player input to server — throttled to NETWORK_UPDATE_RATE (20 Hz).
   useEffect(() => {
-    if (!isGameActive() || !localPlayerRow) return
+    if (!canControlLocalPlayer || !localPlayerRow) return
 
     const now = Date.now()
     const interval = 1000 / GAME_CONSTANTS.NETWORK_UPDATE_RATE // 50 ms at 20 Hz
@@ -95,7 +144,7 @@ const GamePage: React.FC = () => {
       splitPressed: false,
       spitPressed: false,
     })
-  }, [direction, isGameActive, localPlayerRow, sendPlayerInput])
+  }, [canControlLocalPlayer, direction, localPlayerRow, sendPlayerInput])
 
   // Update camera to follow local player.
   // `cameraRef` is used instead of `camera` in the dep array to prevent the
@@ -126,15 +175,62 @@ const GamePage: React.FC = () => {
     return unsubscribe
   }, [onGameEnded])
 
+  useEffect(() => {
+    const now = performance.now()
+    const nextSizes: Record<string, number> = {}
+
+    Object.values(playerRows).forEach(player => {
+      nextSizes[player.id] = player.size
+      const previousSize = previousPlayerSizesRef.current[player.id]
+      if (previousSize !== undefined && player.size > previousSize) {
+        growthPulsesRef.current[player.id] = now
+      }
+    })
+
+    previousPlayerSizesRef.current = nextSizes
+
+    const pulseIds = Object.keys(growthPulsesRef.current)
+    if (pulseIds.length === 0 || growthAnimationFrameRef.current !== null) {
+      return
+    }
+
+    const animateGrowth = () => {
+      const animationNow = performance.now()
+
+      Object.entries(growthPulsesRef.current).forEach(([playerId, startedAt]) => {
+        if (animationNow - startedAt >= GROWTH_PULSE_DURATION_MS) {
+          delete growthPulsesRef.current[playerId]
+        }
+      })
+
+      setGrowthAnimationTick(value => value + 1)
+
+      if (Object.keys(growthPulsesRef.current).length > 0) {
+        growthAnimationFrameRef.current = window.requestAnimationFrame(animateGrowth)
+      } else {
+        growthAnimationFrameRef.current = null
+      }
+    }
+
+    growthAnimationFrameRef.current = window.requestAnimationFrame(animateGrowth)
+
+    return () => {
+      if (growthAnimationFrameRef.current !== null) {
+        window.cancelAnimationFrame(growthAnimationFrameRef.current)
+        growthAnimationFrameRef.current = null
+      }
+    }
+  }, [playerRows])
+
   const handleSplitAction = () => {
-    if (!isGameActive() || !localPlayerRow) return
+    if (!canControlLocalPlayer || !localPlayerRow) return
     setSplitPressed(true)
     sendSplit()
     setTimeout(() => setSplitPressed(false), 100)
   }
 
   const handleSpitAction = () => {
-    if (!isGameActive() || !localPlayerRow) return
+    if (!canControlLocalPlayer || !localPlayerRow) return
     setSpitPressed(true)
     sendSpit()
     setTimeout(() => setSpitPressed(false), 100)
@@ -150,22 +246,68 @@ const GamePage: React.FC = () => {
   }
 
   // Render player circle
-  const renderPlayer = (player: any) => {
+  const getPlayerPulseScale = (playerId: string) => {
+    const pulseStartedAt = growthPulsesRef.current[playerId]
+    if (!pulseStartedAt) {
+      return 1
+    }
+
+    const elapsed = performance.now() - pulseStartedAt
+    const progress = Math.min(1, elapsed / GROWTH_PULSE_DURATION_MS)
+    const pulse = Math.sin(progress * Math.PI) * GROWTH_PULSE_MAX_SCALE
+    return 1 + pulse
+  }
+
+  const renderPlayer = (player: PlayerRowState) => {
     const screenX = player.position.x - camera.position.x + dimensions.width / 2
     const screenY = player.position.y - camera.position.y + dimensions.height / 2
+    const visual = getPlayerVisual(player.id)
+    const displaySize = player.size * getPlayerPulseScale(player.id)
+    const textureSeed = hashString(player.id)
+    const textureOffsetA = ((textureSeed % 7) - 3) * 0.12
+    const textureOffsetB = (((textureSeed >> 3) % 7) - 3) * 0.1
+    const edgeColor = hexToNumber(visual.edge)
+    const textureColor = hexToNumber(visual.texture)
+    const highlightColor = hexToNumber(visual.highlight)
 
     return (
       <pixiGraphics
         key={player.id}
         draw={g => {
           g.clear()
-          g.circle(0, 0, player.size)
-          g.fill({ color: player.color })
+          g.circle(0, 0, displaySize + 8)
+          g.fill({ color: edgeColor, alpha: 0.1 })
+
+          g.circle(0, 0, displaySize)
+          g.fill({ color: visual.base })
+
+          g.circle(-displaySize * 0.22, -displaySize * 0.24, displaySize * 0.48)
+          g.fill({ color: highlightColor, alpha: 0.88 })
+
+          g.circle(displaySize * textureOffsetA, displaySize * -0.08, displaySize * 0.28)
+          g.fill({ color: textureColor, alpha: 0.28 })
+
+          g.circle(displaySize * -0.18, displaySize * textureOffsetB, displaySize * 0.18)
+          g.fill({ color: textureColor, alpha: 0.2 })
+
+          g.moveTo(-displaySize * 0.58, displaySize * 0.22)
+          g.bezierCurveTo(
+            -displaySize * 0.2,
+            displaySize * 0.52,
+            displaySize * 0.24,
+            displaySize * 0.44,
+            displaySize * 0.56,
+            displaySize * 0.08
+          )
+          g.stroke({ width: Math.max(2, displaySize * 0.08), color: textureColor, alpha: 0.2 })
+
+          g.circle(0, 0, displaySize)
+          g.stroke({ width: Math.max(3, displaySize * 0.08), color: edgeColor, alpha: 0.98 })
 
           // Add outline for local player
           if (player.id === localPlayerRow?.id) {
-            g.circle(0, 0, player.size + 2)
-            g.stroke({ width: 3, color: 0xffffff, alpha: 0.8 })
+            g.circle(0, 0, displaySize + 5)
+            g.stroke({ width: 3, color: 0xffffff, alpha: 0.9 })
           }
         }}
         x={screenX}
@@ -175,19 +317,23 @@ const GamePage: React.FC = () => {
   }
 
   // Render knibble
-  const renderKnibble = (knibble: any) => {
+  const renderKnibble = (knibble: KnibbleRowState) => {
     const screenX = knibble.position.x - camera.position.x + dimensions.width / 2
     const screenY = knibble.position.y - camera.position.y + dimensions.height / 2
+    const color = getKnibbleColor(knibble.id)
+    const colorNumber = hexToNumber(color)
 
     return (
       <pixiGraphics
         key={knibble.id}
         draw={g => {
           g.clear()
+          g.circle(0, 0, knibble.size * 1.9)
+          g.fill({ color: colorNumber, alpha: 0.1 })
+          g.circle(0, 0, knibble.size * 1.35)
+          g.fill({ color: colorNumber, alpha: 0.15 })
           g.circle(0, 0, knibble.size)
-          g.fill({ color: knibble.color })
-          g.circle(0, 0, knibble.size)
-          g.stroke({ width: 1, color: 0xffffff, alpha: 0.3 })
+          g.fill({ color })
         }}
         x={screenX}
         y={screenY}
@@ -196,7 +342,7 @@ const GamePage: React.FC = () => {
   }
 
   // Render spit blob
-  const renderSpitBlob = (blob: any) => {
+  const renderSpitBlob = (blob: SpitBlobRowState) => {
     const screenX = blob.position.x - camera.position.x + dimensions.width / 2
     const screenY = blob.position.y - camera.position.y + dimensions.height / 2
 
@@ -287,9 +433,7 @@ const GamePage: React.FC = () => {
     return <pixiContainer>{gridLines}</pixiContainer>
   }
 
-  const isFinished = roomState?.status === GameStatus.FINISHED
-
-  if (!roomState || (!isFinished && (!localPlayerRow || !localPlayer || !localPlayerId))) {
+  if (!roomState || (!isFinished && !isEliminated && (!localPlayerRow || !localPlayer || !localPlayerId))) {
     return (
       <div className='w-screen h-screen flex items-center justify-center bg-[#0F0F23] text-white'>
         <div className='text-center flex flex-col items-center gap-5'>
@@ -349,7 +493,7 @@ const GamePage: React.FC = () => {
         <ActionButtons
           onSplit={handleSplitAction}
           onSpit={handleSpitAction}
-          disabled={!isGameActive()}
+          disabled={!canControlLocalPlayer}
         />
 
         {/* Pause/Menu Button */}
@@ -382,7 +526,7 @@ const GamePage: React.FC = () => {
         )}
 
         {/* Game Over Screen */}
-        {roomState.status === GameStatus.FINISHED && (
+        {(roomState.status === GameStatus.FINISHED || isEliminated) && (
           <GameOverScreen onRestart={() => navigate('/')} />
         )}
       </div>

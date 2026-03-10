@@ -32,6 +32,7 @@ const DEFAULT_SPACETIMEDB_DB_NAME = import.meta.env.VITE_SPACETIMEDB_DB_NAME || 
 const MAX_RECONNECT_ATTEMPTS = 5
 const INITIAL_RECONNECT_DELAY = 1000
 const AUTH_TOKEN_KEY = 'spacetimedb_token'
+const authTokenStorage = window.sessionStorage
 
 const gameStateListeners = new Set<(state: GameState) => void>()
 const playerJoinedListeners = new Set<(data: PlayerJoinedMessage['data']) => void>()
@@ -412,9 +413,9 @@ export const useSocketStore = create<SocketStore>((set, get) => {
       const builder = DbConnection.builder()
         .withUri(serverUrl)
         .withDatabaseName(DEFAULT_SPACETIMEDB_DB_NAME)
-        .withToken(localStorage.getItem(AUTH_TOKEN_KEY) || undefined)
+        .withToken(authTokenStorage.getItem(AUTH_TOKEN_KEY) || undefined)
         .onConnect((conn, identity, token) => {
-          localStorage.setItem(AUTH_TOKEN_KEY, token)
+          authTokenStorage.setItem(AUTH_TOKEN_KEY, token)
           installTableListeners(conn)
 
           const subscription = conn

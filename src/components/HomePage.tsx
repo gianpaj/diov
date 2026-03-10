@@ -188,6 +188,8 @@ const HomePage: React.FC = () => {
               onChange={e => setPlayerName(e.target.value)}
               placeholder='Enter your name'
               maxLength={20}
+              // biome-ignore lint/a11y/noAutofocus: needed
+              autoFocus
               disabled={isJoining}
               className='w-full px-5 py-3.75 rounded-btn border-2 border-white/30 bg-white/10 text-white text-base outline-none mb-5 backdrop-blur-[10px] text-center focus:border-white/60 focus:shadow-[0_0_0_2px_rgba(102,126,234,0.3)] placeholder:text-white/50'
               onKeyDown={e => {

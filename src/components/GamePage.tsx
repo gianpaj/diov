@@ -35,6 +35,7 @@ const KNIBBLE_RENDER_PALETTE = [
 
 const GROWTH_PULSE_DURATION_MS = 180
 const GROWTH_PULSE_MAX_SCALE = 0.18
+const MOUSE_DEAD_ZONE_PX = GAME_CONSTANTS.JOYSTICK_MAX_DISTANCE * GAME_CONSTANTS.JOYSTICK_DEAD_ZONE
 
 const hashString = (value: string): number => {
   let hash = 0
@@ -59,6 +60,8 @@ const GamePage: React.FC = () => {
   const navigate = useNavigate()
 
   const [isPaused, setIsPaused] = useState(false)
+  const [hasFinePointer, setHasFinePointer] = useState(false)
+  const [hasCoarsePointer, setHasCoarsePointer] = useState(false)
   const [dimensions, setDimensions] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -75,6 +78,7 @@ const GamePage: React.FC = () => {
     localPlayerId,
     camera,
     isGameActive,
+    playerInput,
     updateCamera,
     setMovementInput,
     setSplitPressed,
@@ -93,6 +97,7 @@ const GamePage: React.FC = () => {
   const previousPlayerSizesRef = useRef<Record<string, number>>({})
   const growthPulsesRef = useRef<Record<string, number>>({})
   const growthAnimationFrameRef = useRef<number | null>(null)
+  const lastInputModeRef = useRef<'mouse' | 'touch'>('mouse')
   const [, setGrowthAnimationTick] = useState(0)
   useEffect(() => {
     cameraRef.current = camera
@@ -107,8 +112,29 @@ const GamePage: React.FC = () => {
   } = useJoystick()
 
   const isFinished = roomState?.status === GameStatus.FINISHED
-  const isEliminated = roomState?.status === GameStatus.PLAYING && !localPlayerRow && !!localPlayerResultRow
+  const isEliminated =
+    roomState?.status === GameStatus.PLAYING && !localPlayerRow && !!localPlayerResultRow
   const canControlLocalPlayer = isGameActive() && !!localPlayerRow && !isEliminated
+  const shouldShowJoystick = hasCoarsePointer
+
+  useEffect(() => {
+    const finePointerQuery = window.matchMedia('(any-pointer: fine)')
+    const coarsePointerQuery = window.matchMedia('(any-pointer: coarse)')
+
+    const updatePointerCapabilities = () => {
+      setHasFinePointer(finePointerQuery.matches)
+      setHasCoarsePointer(coarsePointerQuery.matches)
+    }
+
+    updatePointerCapabilities()
+    finePointerQuery.addEventListener('change', updatePointerCapabilities)
+    coarsePointerQuery.addEventListener('change', updatePointerCapabilities)
+
+    return () => {
+      finePointerQuery.removeEventListener('change', updatePointerCapabilities)
+      coarsePointerQuery.removeEventListener('change', updatePointerCapabilities)
+    }
+  }, [])
 
   // Handle window resize
   useEffect(() => {
@@ -125,10 +151,10 @@ const GamePage: React.FC = () => {
 
   // Handle joystick input
   useEffect(() => {
-    if (canControlLocalPlayer) {
+    if (canControlLocalPlayer && shouldShowJoystick && lastInputModeRef.current !== 'mouse') {
       setMovementInput(direction)
     }
-  }, [canControlLocalPlayer, direction, setMovementInput])
+  }, [canControlLocalPlayer, direction, setMovementInput, shouldShowJoystick])
 
   // Send player input to server — throttled to NETWORK_UPDATE_RATE (20 Hz).
   useEffect(() => {
@@ -140,11 +166,11 @@ const GamePage: React.FC = () => {
 
     lastInputSentAt.current = now
     sendPlayerInput({
-      movement: direction,
+      movement: playerInput.movement,
       splitPressed: false,
       spitPressed: false,
     })
-  }, [canControlLocalPlayer, direction, localPlayerRow, sendPlayerInput])
+  }, [canControlLocalPlayer, localPlayerRow, playerInput.movement, sendPlayerInput])
 
   // Update camera to follow local player.
   // `cameraRef` is used instead of `camera` in the dep array to prevent the
@@ -243,6 +269,61 @@ const GamePage: React.FC = () => {
   const handleLeaveGame = () => {
     leaveGame()
     navigate('/')
+  }
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!hasFinePointer || !localPlayerRow) {
+      return
+    }
+
+    lastInputModeRef.current = 'mouse'
+
+    const playerScreenX = localPlayerRow.position.x - camera.position.x + dimensions.width / 2
+    const playerScreenY = localPlayerRow.position.y - camera.position.y + dimensions.height / 2
+    const deltaX = event.clientX - playerScreenX
+    const deltaY = event.clientY - playerScreenY
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+
+    if (distance <= MOUSE_DEAD_ZONE_PX) {
+      const nextDirection = { x: 0, y: 0 }
+      if (canControlLocalPlayer) {
+        setMovementInput(nextDirection)
+      }
+      return
+    }
+
+    const clampedDistance = Math.min(distance, GAME_CONSTANTS.JOYSTICK_MAX_DISTANCE)
+    const normalizedMagnitude = clampedDistance / GAME_CONSTANTS.JOYSTICK_MAX_DISTANCE
+    const angle = Math.atan2(deltaY, deltaX)
+
+    const nextDirection = {
+      x: Math.cos(angle) * normalizedMagnitude,
+      y: Math.sin(angle) * normalizedMagnitude,
+    }
+
+    if (canControlLocalPlayer) {
+      setMovementInput(nextDirection)
+    }
+  }
+
+  const handleMouseLeaveViewport = () => {
+    // Preserve the last mouse-derived movement vector when the cursor leaves
+    // the viewport; the next mousemove will update it again.
+  }
+
+  const handleJoystickTouchStart = (event: React.TouchEvent) => {
+    lastInputModeRef.current = 'touch'
+    joystickHandlers.onTouchStart(event)
+  }
+
+  const handleJoystickTouchMove = (event: React.TouchEvent) => {
+    lastInputModeRef.current = 'touch'
+    joystickHandlers.onTouchMove(event)
+  }
+
+  const handleJoystickTouchEnd = (event: React.TouchEvent) => {
+    lastInputModeRef.current = 'touch'
+    joystickHandlers.onTouchEnd(event)
   }
 
   // Render player circle
@@ -433,7 +514,10 @@ const GamePage: React.FC = () => {
     return <pixiContainer>{gridLines}</pixiContainer>
   }
 
-  if (!roomState || (!isFinished && !isEliminated && (!localPlayerRow || !localPlayer || !localPlayerId))) {
+  if (
+    !roomState ||
+    (!isFinished && !isEliminated && (!localPlayerRow || !localPlayer || !localPlayerId))
+  ) {
     return (
       <div className='w-screen h-screen flex items-center justify-center bg-[#0F0F23] text-white'>
         <div className='text-center flex flex-col items-center gap-5'>
@@ -445,7 +529,12 @@ const GamePage: React.FC = () => {
   }
 
   return (
-    <div className='relative w-screen h-screen overflow-hidden bg-[#0F0F23]'>
+    // biome-ignore lint/a11y/noStaticElementInteractions: mouse
+    <div
+      className='relative w-screen h-screen overflow-hidden bg-[#0F0F23]'
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeaveViewport}
+    >
       {/* PIXI.js canvas */}
       <Application
         width={dimensions.width}
@@ -481,13 +570,18 @@ const GamePage: React.FC = () => {
         <GameHUD />
 
         {/* Virtual Joystick */}
-        <VirtualJoystick
-          ref={joystickRef}
-          {...joystickHandlers}
-          isActive={joystickActive}
-          direction={direction}
-          magnitude={magnitude}
-        />
+        {shouldShowJoystick && (
+          <VirtualJoystick
+            ref={joystickRef}
+            isActive={joystickActive}
+            direction={direction}
+            magnitude={magnitude}
+            onTouchStart={handleJoystickTouchStart}
+            onTouchMove={handleJoystickTouchMove}
+            onTouchEnd={handleJoystickTouchEnd}
+            onMouseDown={joystickHandlers.onMouseDown}
+          />
+        )}
 
         {/* Action Buttons */}
         <ActionButtons

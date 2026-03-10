@@ -247,6 +247,17 @@ function updateRoomTimestamp(ctx: any, currentRoom: any, patch: Record<string, u
   })
 }
 
+function resetRoomToWaiting(ctx: any, currentRoom: any, patch: Record<string, unknown> = {}) {
+  updateRoomTimestamp(ctx, currentRoom, {
+    status: 'waiting',
+    countdownEndsAt: undefined,
+    startedAt: undefined,
+    endedAt: undefined,
+    winnerIdentity: undefined,
+    ...patch,
+  })
+}
+
 function ensureGameTick(ctx: any, roomId: string, afterMicros: bigint = TICK_INTERVAL_MS * 1000n) {
   ctx.db.gameTick.insert({
     scheduledId: 0n,
@@ -360,12 +371,37 @@ function resolvePlayerCollisions(ctx: any, roomId: string) {
   }
 }
 
+function resetPlayersForNewMatch(ctx: any, roomId: string) {
+  const startedAt = currentTimeMs(ctx)
+  for (const currentPlayer of roomPlayers(ctx, roomId)) {
+    const spawn = randomSpawn(ctx, PLAYER_START_RADIUS)
+    ctx.db.player.identity.update({
+      ...currentPlayer,
+      x: spawn.x,
+      y: spawn.y,
+      radius: PLAYER_START_RADIUS,
+      velX: 0,
+      velY: 0,
+      inputX: 0,
+      inputY: 0,
+      score: 0,
+      isAlive: true,
+      joinedAt: startedAt,
+    })
+  }
+}
+
 export const join_game = battleCircles.reducer(
   { roomId: t.string().optional(), playerName: t.string() },
   (ctx, { roomId, playerName }) => {
     const targetRoomId = roomId?.trim() || DEFAULT_ROOM_ID
-    const currentRoom = ensureRoom(ctx, targetRoomId)
+    let currentRoom = ensureRoom(ctx, targetRoomId)
     const count = roomPlayerCount(ctx, targetRoomId)
+    if (count === 0 && currentRoom.status !== 'waiting') {
+      resetRoomToWaiting(ctx, currentRoom, { hostIdentity: undefined })
+      currentRoom = ctx.db.room.id.find(targetRoomId)!
+    }
+
     if (count >= currentRoom.maxPlayers) {
       throw new SenderError('Room is full')
     }
@@ -395,8 +431,12 @@ export const leave_game = battleCircles.reducer((ctx) => {
   }
 
   const remaining = roomPlayers(ctx, playerRow.roomId)
-  const nextHost = remaining[0]?.identity
-  updateRoomTimestamp(ctx, currentRoom, { hostIdentity: nextHost })
+  if (remaining.length === 0) {
+    resetRoomToWaiting(ctx, currentRoom, { hostIdentity: undefined })
+    return
+  }
+
+  updateRoomTimestamp(ctx, currentRoom, { hostIdentity: remaining[0]?.identity })
 })
 
 export const start_game = battleCircles.reducer((ctx) => {
@@ -410,7 +450,7 @@ export const start_game = battleCircles.reducer((ctx) => {
     throw new SenderError('Only the host can start the game')
   }
 
-  if (currentRoom.status !== 'waiting') {
+  if (currentRoom.status === 'starting' || currentRoom.status === 'playing') {
     throw new SenderError('Room already started')
   }
 
@@ -419,6 +459,7 @@ export const start_game = battleCircles.reducer((ctx) => {
     throw new SenderError('Not enough players to start')
   }
 
+  resetPlayersForNewMatch(ctx, currentRoom.id)
   const countdownEndsAt = currentTimeMs(ctx) + 5000n
   updateRoomTimestamp(ctx, currentRoom, {
     status: 'starting',
@@ -586,7 +627,10 @@ export const on_disconnect = battleCircles.clientDisconnected((ctx) => {
   }
 
   const remaining = roomPlayers(ctx, playerRow.roomId)
-  updateRoomTimestamp(ctx, currentRoom, {
-    hostIdentity: remaining[0]?.identity,
-  })
+  if (remaining.length === 0) {
+    resetRoomToWaiting(ctx, currentRoom, { hostIdentity: undefined })
+    return
+  }
+
+  updateRoomTimestamp(ctx, currentRoom, { hostIdentity: remaining[0]?.identity })
 })

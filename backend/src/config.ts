@@ -1,108 +1,69 @@
 /**
- * src/config/index.ts
+ * backend/src/config.ts
  *
- * Centralised configuration loader + validator.
+ * Legacy Node backend configuration.
  *
- * - Uses dotenv to read `.env`
- * - Validates with zod (type safety + runtime guard)
- * - Exposes a singleton `config` object
+ * The main real-time gameplay path is migrating to SpacetimeDB, but the old
+ * backend still exists during transition. This config therefore favors:
  *
- * Usage:
- *   import { config } from '@/config';
- *   console.log(config.PORT);
+ * - safe local defaults,
+ * - optional persistence URLs,
+ * - and predictable startup without requiring a fully populated `.env`.
  */
 
 import dotenv from 'dotenv'
 import { z } from 'zod'
 
-dotenv.config() // Load .env
+dotenv.config()
 
-/* ------------------------------------------------------------------ */
-/* 1️⃣ Schema – declare all env vars and their types                  */
-/* ------------------------------------------------------------------ */
-const EnvSchema = z.object({
-  /* --- App -------------------------------------------------------- */
-  PORT: z
+const intFromEnv = (defaultValue: number, name: string) =>
+  z
     .string()
+    .optional()
+    .default(String(defaultValue))
     .transform(v => parseInt(v, 10))
-    .refine(n => !Number.isNaN(n), {
-      message: 'PORT must be a number',
-    }),
+    .refine(n => Number.isInteger(n), {
+      message: `${name} must be an integer`,
+    })
 
-  /* --- Gameplay --------------------------------------------------- */
-  TICK_RATE: z
+const numberFromEnv = (defaultValue: number, name: string) =>
+  z
     .string()
-    .transform(v => parseInt(v, 10))
-    .refine(n => !Number.isNaN(n), { message: 'TICK_RATE must be a number' }),
-  MAX_PLAYERS_PER_ROOM: z
-    .string()
-    .transform(v => parseInt(v, 10))
-    .refine(n => !Number.isNaN(n), {
-      message: 'MAX_PLAYERS_PER_ROOM must be a number',
-    }),
-  MIN_PLAYERS_PER_ROOM: z
-    .string()
-    .transform(v => parseInt(v, 10))
-    .refine(n => !Number.isNaN(n), {
-      message: 'MIN_PLAYERS_PER_ROOM must be a number',
-    }),
-  MAX_SPEED: z
-    .string()
+    .optional()
+    .default(String(defaultValue))
     .transform(v => parseFloat(v))
-    .refine(n => !Number.isNaN(n), { message: 'MAX_SPEED must be a number' }),
-  MAP_WIDTH: z
-    .string()
-    .transform(v => parseInt(v, 10))
-    .refine(n => !Number.isNaN(n), { message: 'MAP_WIDTH must be a number' }),
-  MAP_HEIGHT: z
-    .string()
-    .transform(v => parseInt(v, 10))
-    .refine(n => !Number.isNaN(n), { message: 'MAP_HEIGHT must be a number' }),
+    .refine(n => !Number.isNaN(n), {
+      message: `${name} must be a number`,
+    })
 
-  /* --- Redis ------------------------------------------------------ */
-  REDIS_URL: z.url().optional(),
-
-  /* --- PostgreSQL ----------------------------------------------- */
-  DATABASE_URL: z.string().optional(), // postgres://user:pass@host/db
-
-  /* --- Security --------------------------------------------------- */
-  CORS_ORIGIN: z.string().default('*'),
-
-  /* --- Misc ------------------------------------------------------ */
-  NODE_ENV: z.enum(['development', 'production']).default('development'),
+const EnvSchema = z.object({
+  PORT: intFromEnv(3001, 'PORT'),
+  TICK_RATE: intFromEnv(50, 'TICK_RATE'),
+  MAX_PLAYERS_PER_ROOM: intFromEnv(12, 'MAX_PLAYERS_PER_ROOM'),
+  MIN_PLAYERS_PER_ROOM: intFromEnv(2, 'MIN_PLAYERS_PER_ROOM'),
+  MAX_SPEED: numberFromEnv(5, 'MAX_SPEED'),
+  MAP_WIDTH: intFromEnv(2000, 'MAP_WIDTH'),
+  MAP_HEIGHT: intFromEnv(2000, 'MAP_HEIGHT'),
+  REDIS_URL: z.string().optional(),
+  DATABASE_URL: z.string().optional(),
+  CORS_ORIGIN: z.string().optional().default('*'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 })
 
-/* ------------------------------------------------------------------ */
-/* 2️⃣ Parse and validate                                           */
-/* ------------------------------------------------------------------ */
 const env = EnvSchema.parse(process.env)
 
-/* ------------------------------------------------------------------ */
-/* 3️⃣ Export a typed config object                                 */
-/* ------------------------------------------------------------------ */
 export const config = {
-  /* App */
   PORT: env.PORT,
-
-  /* Gameplay */
-  TICK_RATE: env.TICK_RATE, // ms per tick
+  TICK_RATE: env.TICK_RATE,
   MAX_PLAYERS_PER_ROOM: env.MAX_PLAYERS_PER_ROOM,
   MIN_PLAYERS_PER_ROOM: env.MIN_PLAYERS_PER_ROOM,
-  MAX_SPEED: env.MAX_SPEED, // px per tick
+  MAX_SPEED: env.MAX_SPEED,
   MAP_SIZE: {
     width: env.MAP_WIDTH,
     height: env.MAP_HEIGHT,
   },
-
-  /* Redis */
   REDIS_URL: env.REDIS_URL,
-
-  /* PostgreSQL */
   DATABASE_URL: env.DATABASE_URL,
-
-  /* Security */
   CORS_ORIGIN: env.CORS_ORIGIN,
-
-  /* Misc */
   NODE_ENV: env.NODE_ENV,
 }

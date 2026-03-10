@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@source not "../docs/**";
 
 /* ── Tailwind v4 theme tokens ─────────────────────────────────────────────────
    These CSS custom properties are consumed by Tailwind utility classes AND by
@@ -46,56 +45,58 @@
   --z-overlay: 100;
 }
 
-/* Global CSS Reset and Base Styles */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@layer base {
+  /* Global CSS Reset and Base Styles */
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-html,
-body {
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #000;
-  color: #fff;
-}
+  html,
+  body {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #000;
+    color: #fff;
+  }
 
-/* Disable text selection and context menus */
-* {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-  -webkit-tap-highlight-color: transparent;
-}
+  /* Disable text selection and context menus */
+  * {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
 
-/* Allow text selection for specific elements */
-input,
-textarea {
-  -webkit-user-select: text;
-  -moz-user-select: text;
-  -ms-user-select: text;
-  user-select: text;
-}
+  /* Allow text selection for specific elements */
+  input,
+  textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
 
-/* Root container */
-#root {
-  width: 100vw;
-  height: 100vh;
-  position: relative;
-  overflow: hidden;
-  background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 35%, #0f0f23 100%);
+  /* Root container */
+  #root {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+    overflow: hidden;
+    background: radial-gradient(ellipse at center, #1a1a2e 0%, #16213e 35%, #0f0f23 100%);
+  }
 }
 
 /* ── Button components ────────────────────────────────────────────────────── */
@@ -110,8 +111,12 @@ textarea {
   .btn:hover {
     @apply -translate-y-0.5 shadow-[0_8px_25px_rgba(102,126,234,0.4)];
   }
-  .btn:active  { @apply translate-y-0; }
-  .btn:disabled { @apply opacity-50 cursor-not-allowed translate-y-0 shadow-none; }
+  .btn:active {
+    @apply translate-y-0;
+  }
+  .btn:disabled {
+    @apply opacity-50 cursor-not-allowed translate-y-0 shadow-none;
+  }
 
   .btn-primary {
     @apply bg-gradient-to-br from-accent-red to-[#ee5a52];

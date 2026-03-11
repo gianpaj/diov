@@ -1,28 +1,37 @@
-import express from 'express'
+import { Hono } from 'hono'
+import { cors } from 'hono/cors'
+import { serve } from '@hono/node-server'
+import { auth } from './auth.ts'
 import { config } from './config.ts'
 
-const app = express()
-app.use(express.json())
+const app = new Hono()
 
-app.use((_req, res, next) => {
-  res.header('Access-Control-Allow-Origin', config.CORS_ORIGIN)
-  res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-  next()
-})
+// CORS must be registered before Better Auth handler
+app.use(
+  '/api/auth/*',
+  cors({
+    origin: config.CORS_ORIGIN === '*' ? '*' : config.CORS_ORIGIN,
+    credentials: true,
+    allowHeaders: ['Content-Type', 'Authorization'],
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
+  }),
+)
 
-app.get('/', (_req, res) => {
-  res.json({
+// Better Auth handler — catches all /api/auth/* routes
+app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+
+// Health / info routes
+app.get('/', (c) =>
+  c.json({
     service: 'battle-circles-backend',
-    role: 'future business backend',
+    role: 'auth & payments',
     gameplayAuthority: 'spacetimedb',
     status: 'ok',
-  })
-})
+  }),
+)
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' })
-})
+app.get('/health', (c) => c.json({ status: 'ok' }))
 
-app.listen(config.PORT, () => {
-  console.log(`Backend service listening on http://localhost:${config.PORT}`)
+serve({ fetch: app.fetch, port: config.PORT }, (info) => {
+  console.log(`Backend service listening on http://localhost:${info.port}`)
 })

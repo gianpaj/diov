@@ -10,28 +10,29 @@ const app = new Hono()
 app.use(
   '/api/auth/*',
   cors({
-    origin: config.CORS_ORIGIN === '*' ? '*' : config.CORS_ORIGIN,
+    // When CORS_ORIGIN is '*', echo the request origin instead of using '*'
+    origin: origin => (config.CORS_ORIGIN === '*' ? origin : config.CORS_ORIGIN),
     credentials: true,
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'OPTIONS'],
-  }),
+  })
 )
 
 // Better Auth handler — catches all /api/auth/* routes
-app.on(['POST', 'GET'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+app.on(['POST', 'GET'], '/api/auth/*', c => auth.handler(c.req.raw))
 
 // Health / info routes
-app.get('/', (c) =>
+app.get('/', c =>
   c.json({
     service: 'battle-circles-backend',
     role: 'auth & payments',
     gameplayAuthority: 'spacetimedb',
     status: 'ok',
-  }),
+  })
 )
 
-app.get('/health', (c) => c.json({ status: 'ok' }))
+app.get('/health', c => c.json({ status: 'ok' }))
 
-serve({ fetch: app.fetch, port: config.PORT }, (info) => {
+serve({ fetch: app.fetch, port: config.PORT }, info => {
   console.log(`Backend service listening on http://localhost:${info.port}`)
 })

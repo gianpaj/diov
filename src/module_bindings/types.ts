@@ -39,6 +39,7 @@ export const Player = __t.object("Player", {
   inputX: __t.f64(),
   inputY: __t.f64(),
   color: __t.string(),
+  skinId: __t.option(__t.string()),
   score: __t.u32(),
   isAlive: __t.bool(),
   lastSplitAt: __t.i64(),
@@ -64,6 +65,7 @@ export type PlayerResult = __Infer<typeof PlayerResult>;
 
 export const Room = __t.object("Room", {
   id: __t.string(),
+  mode: __t.string(),
   status: __t.string(),
   hostIdentity: __t.option(__t.identity()),
   countdownEndsAt: __t.option(__t.i64()),

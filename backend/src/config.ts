@@ -1,14 +1,8 @@
 /**
  * backend/src/config.ts
  *
- * Legacy Node backend configuration.
- *
- * The main real-time gameplay path is migrating to SpacetimeDB, but the old
- * backend still exists during transition. This config therefore favors:
- *
- * - safe local defaults,
- * - optional persistence URLs,
- * - and predictable startup without requiring a fully populated `.env`.
+ * Environment configuration for the auth & payments backend.
+ * Game data lives in SpacetimeDB — this backend only handles auth and payments.
  */
 
 import dotenv from 'dotenv'
@@ -26,44 +20,47 @@ const intFromEnv = (defaultValue: number, name: string) =>
       message: `${name} must be an integer`,
     })
 
-const numberFromEnv = (defaultValue: number, name: string) =>
-  z
-    .string()
-    .optional()
-    .default(String(defaultValue))
-    .transform(v => parseFloat(v))
-    .refine(n => !Number.isNaN(n), {
-      message: `${name} must be a number`,
-    })
-
 const EnvSchema = z.object({
   PORT: intFromEnv(3001, 'PORT'),
-  TICK_RATE: intFromEnv(50, 'TICK_RATE'),
-  MAX_PLAYERS_PER_ROOM: intFromEnv(12, 'MAX_PLAYERS_PER_ROOM'),
-  MIN_PLAYERS_PER_ROOM: intFromEnv(2, 'MIN_PLAYERS_PER_ROOM'),
-  MAX_SPEED: numberFromEnv(5, 'MAX_SPEED'),
-  MAP_WIDTH: intFromEnv(2000, 'MAP_WIDTH'),
-  MAP_HEIGHT: intFromEnv(2000, 'MAP_HEIGHT'),
-  REDIS_URL: z.string().optional(),
-  DATABASE_URL: z.string().optional(),
-  CORS_ORIGIN: z.string().optional().default('*'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  CORS_ORIGIN: z
+    .string()
+    .optional()
+    .default('http://localhost:5173')
+    .refine(v => v !== '*', {
+      message:
+        'CORS_ORIGIN must be an explicit origin (e.g. https://example.com). Wildcard "*" is not allowed.',
+    }),
+
+  // ── Better Auth ────────────────────────────────────────────────────────────
+  BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
+  BETTER_AUTH_URL: z.string().url().optional().default('http://localhost:3001'),
+
+  // ── Turso / libSQL ─────────────────────────────────────────────────────────
+  TURSO_DATABASE_URL: z.string().min(1, 'TURSO_DATABASE_URL is required'),
+  TURSO_AUTH_TOKEN: z.string().optional().default(''),
+
+  // ── Discord OAuth ──────────────────────────────────────────────────────────
+  DISCORD_CLIENT_ID: z.string().min(1, 'DISCORD_CLIENT_ID is required'),
+  DISCORD_CLIENT_SECRET: z.string().min(1, 'DISCORD_CLIENT_SECRET is required'),
+
+  // ── Telegram ───────────────────────────────────────────────────────────────
+  TELEGRAM_BOT_TOKEN: z.string().min(1, 'TELEGRAM_BOT_TOKEN is required'),
+  TELEGRAM_BOT_USERNAME: z.string().min(1, 'TELEGRAM_BOT_USERNAME is required (without @)'),
 })
 
 const env = EnvSchema.parse(process.env)
 
 export const config = {
   PORT: env.PORT,
-  TICK_RATE: env.TICK_RATE,
-  MAX_PLAYERS_PER_ROOM: env.MAX_PLAYERS_PER_ROOM,
-  MIN_PLAYERS_PER_ROOM: env.MIN_PLAYERS_PER_ROOM,
-  MAX_SPEED: env.MAX_SPEED,
-  MAP_SIZE: {
-    width: env.MAP_WIDTH,
-    height: env.MAP_HEIGHT,
-  },
-  REDIS_URL: env.REDIS_URL,
-  DATABASE_URL: env.DATABASE_URL,
-  CORS_ORIGIN: env.CORS_ORIGIN,
   NODE_ENV: env.NODE_ENV,
+  CORS_ORIGIN: env.CORS_ORIGIN,
+  BETTER_AUTH_SECRET: env.BETTER_AUTH_SECRET,
+  BETTER_AUTH_URL: env.BETTER_AUTH_URL,
+  TURSO_DATABASE_URL: env.TURSO_DATABASE_URL,
+  TURSO_AUTH_TOKEN: env.TURSO_AUTH_TOKEN,
+  DISCORD_CLIENT_ID: env.DISCORD_CLIENT_ID,
+  DISCORD_CLIENT_SECRET: env.DISCORD_CLIENT_SECRET,
+  TELEGRAM_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN,
+  TELEGRAM_BOT_USERNAME: env.TELEGRAM_BOT_USERNAME,
 }

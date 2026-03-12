@@ -47,6 +47,8 @@ export interface InputVector {
 
 // ── Room / game status ───────────────────────────────────────────────────────
 
+export type RoomMode = 'guest' | 'competitive' | 'casual_powerups'
+
 /**
  * Canonical room status string union.
  *
@@ -86,6 +88,7 @@ export interface PlayerState {
   size: number
   /** CSS colour string, e.g. "#FF6B6B". */
   color: string
+  skinId?: string
   isAlive: boolean
   score: number
   lastSplitTime: number
@@ -115,6 +118,7 @@ export interface SpitBlobState {
 
 export interface RoomState {
   id: RoomId
+  mode: RoomMode
   status: RoomStatusValue
   hostId?: string
   countdownEndsAt?: number
@@ -137,6 +141,7 @@ export interface PlayerRowState {
   input: InputVector
   size: number
   color: string
+  skinId?: string
   score: number
   isAlive: boolean
   lastSplitTime: number
@@ -240,6 +245,8 @@ export interface JoinGamePayload {
   playerName: string
   /** Defaults to "global" on the backend if omitted. */
   roomId?: string
+  skinId?: string
+  color?: string
 }
 
 // ── Server → client payloads ─────────────────────────────────────────────────

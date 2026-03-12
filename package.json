@@ -24,8 +24,12 @@
     "prepare": "husky install"
   },
   "dependencies": {
+    "@biomejs/biome": "^2.4.6",
     "@pixi/react": "^8.0.5",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@tailwindcss/vite": "^4.2.1",
+    "better-auth": "^1.5.4",
+    "better-auth-telegram": "^1.5.0",
     "clsx": "^2.0.0",
     "lucide-react": "^0.294.0",
     "pixi.js": "^8.16.0",
@@ -65,7 +69,7 @@
     ]
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": ">=22.0.0",
     "npm": ">=9.0.0"
   }
 }

@@ -51,13 +51,13 @@ export default defineConfig({
       // Shared package — lets the frontend import from @battle-circles/shared
       // without needing the pnpm workspace to be fully installed.
       // Maps sub-path exports too: /events, /schema, /validators
-      '@battle-circles/shared/events': path.resolve(__dirname, './packages/shared/src/events.ts'),
-      '@battle-circles/shared/schema': path.resolve(__dirname, './packages/shared/src/schema.ts'),
+      '@battle-circles/shared/events': path.resolve(__dirname, '../../packages/shared/src/events.ts'),
+      '@battle-circles/shared/schema': path.resolve(__dirname, '../../packages/shared/src/schema.ts'),
       '@battle-circles/shared/validators': path.resolve(
         __dirname,
-        './packages/shared/src/validators.ts'
+        '../../packages/shared/src/validators.ts'
       ),
-      '@battle-circles/shared': path.resolve(__dirname, './packages/shared/src/index.ts'),
+      '@battle-circles/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
   },
   server: {

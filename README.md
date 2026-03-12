@@ -1,8 +1,8 @@
 # Battle Circles
 
-Battle Circles is a real-time multiplayer browser game built for mobile-first, landscape play. Players control circles, collect knibbles, eat smaller opponents, and try to survive until the match ends.
+Battle Circles is a real-time multiplayer browser game built for mobile-first, landscape play. Players control circles, collect knibbles, eat smaller opponents, and survive until the round ends.
 
-The project has been migrated to a SpacetimeDB-based authoritative multiplayer model. The frontend now talks directly to SpacetimeDB for lobby state, countdown, gameplay, and end-of-match results.
+Gameplay is authoritative in SpacetimeDB. The frontend subscribes directly to row-level game state and calls reducers for player intent. The Node backend in `apps/backend/` now handles auth and commerce concerns, not match simulation.
 
 ## Current Stack
 
@@ -11,9 +11,9 @@ The project has been migrated to a SpacetimeDB-based authoritative multiplayer m
 | Frontend | React 18 + TypeScript + Vite |
 | Rendering | PIXI.js via `@pixi/react` |
 | Client state | Zustand |
-| Authoritative backend | SpacetimeDB |
+| Authoritative gameplay backend | SpacetimeDB |
 | Shared schema | `packages/shared` codegen |
-| Legacy backend | Node.js + Express + Socket.io (`backend/`) |
+| Auth / commerce backend | Hono + Better Auth + libSQL |
 
 ## Architecture
 
@@ -21,30 +21,51 @@ The project has been migrated to a SpacetimeDB-based authoritative multiplayer m
 Frontend (React + PIXI + Zustand)
   ├─ subscribes to SpacetimeDB tables
   ├─ renders from authoritative row state
-  └─ sends reducers for player intent
+  ├─ calls reducers for movement / split / spit / lobby actions
+  └─ calls backend HTTP APIs for auth, coins, shop, and loadouts
 
 SpacetimeDB module
   ├─ room lifecycle
-  ├─ host / lobby / countdown
-  ├─ simulation tick
+  ├─ queue modes: guest / competitive / casual_powerups
+  ├─ countdown and match simulation
   ├─ collisions and eliminations
   └─ player_result standings
 
-Legacy Node backend
-  └─ not used for active gameplay authority
+Backend service
+  ├─ Better Auth sessions
+  ├─ Telegram Login Widget + Mini App auth
+  ├─ wallet / ledger / catalog / inventory / loadout APIs
+  └─ future TON checkout, webhooks, and entitlements
 ```
 
 ## Important Directories
 
 ```txt
-src/                    frontend app
-src/module_bindings/    generated SpacetimeDB TypeScript bindings
-src/stores/             GameStore + SocketStore
+apps/frontend/          frontend app package
+apps/frontend/src/module_bindings/ generated SpacetimeDB TypeScript bindings
+apps/frontend/src/stores/          GameStore + SocketStore
+apps/backend/           auth, economy, and future payment backend
 packages/shared/        canonical schema + generated frontend/backend types
 packages/spacetimedb/   authoritative game module
-backend/                legacy backend / future business backend
 docs/                   plans and research
 ```
+
+## Queue Model
+
+- `guest-global` → anonymous users can browse and play, but nothing persists
+- `competitive-global` → registered-only fair queue
+- `casual-global` → registered-only queue reserved for future entitlement-based modes
+
+The frontend remembers the last queue separately for anonymous and registered users.
+
+## Economy and Auth
+
+- Coins are backend-owned, not stored in SpacetimeDB
+- Inventory and equipped loadouts live in the backend
+- SpacetimeDB only receives match-scoped cosmetic appearance data such as `skinId` and `color`
+- Telegram Login Widget is the standalone browser sign-in path
+- Telegram Mini App sign-in remains supported when the app runs inside Telegram
+- TON is the primary planned paid checkout rail; current backend purchase flow records pending TON purchase references rather than completing live blockchain checkout
 
 ## Run Locally
 
@@ -52,81 +73,135 @@ docs/                   plans and research
 
 ```bash
 pnpm install
-pnpm --filter backend install
 ```
 
-### 2. Generate bindings and shared types
+### 2. Generate shared types and bindings
 
 ```bash
 pnpm --filter @battle-circles/shared codegen
-pnpm run spacetime:generate
+pnpm --filter @battle-circles/spacetimedb generate
 ```
 
-### 3. Start SpacetimeDB and publish the module
+### 3. Start SpacetimeDB
 
 ```bash
 pnpm run spacetime:start
-pnpm run spacetime:publish:local <db-name>
 ```
 
-If you use anonymous local publish during development, expect the DB name to change when ownership/token state changes.
+### 4. Publish the SpacetimeDB module
 
-### 4. Configure frontend env
+Use a stable local CLI identity before publishing. For a fresh local server:
 
-Create `.env.local` with values like:
+```bash
+spacetime logout
+spacetime list --server local -y
+pnpm --filter @battle-circles/spacetimedb publish:local battle-circles
+```
+
+If the local DB owner drifts, stop the running local SpacetimeDB process, run `spacetime server clear`, start the server again, then repeat the login + publish sequence above.
+
+### 5. Configure frontend env
+
+Create `apps/frontend/.env` with values like:
 
 ```env
 VITE_SPACETIMEDB_HOST=ws://127.0.0.1:3002
-VITE_SPACETIMEDB_DB_NAME=battle-circles-v4
+VITE_SPACETIMEDB_DB_NAME=battle-circles
+VITE_BETTER_AUTH_URL=http://localhost:3001
 ```
 
-### 5. Start the frontend
+### 6. Configure backend env
+
+Create `apps/frontend/.env` from `apps/frontend/.env.example` and `apps/backend/.env` from `apps/backend/.env.example`. At minimum for the backend:
+
+```env
+PORT=3001
+CORS_ORIGIN=http://localhost:5173
+BETTER_AUTH_URL=http://localhost:3001
+BETTER_AUTH_SECRET=replace-with-a-real-secret
+TURSO_DATABASE_URL=file:local.db
+TELEGRAM_BOT_TOKEN=your-telegram-bot-token
+TELEGRAM_BOT_USERNAME=your_bot_username
+```
+
+### 7. Start the backend
 
 ```bash
-pnpm run dev
+pnpm --filter backend dev
 ```
+
+### 8. Start the frontend
+
+```bash
+pnpm --filter frontend dev
+```
+
+## Telegram Login Widget in Local Dev
+
+Telegram Login Widget does not work reliably on `localhost` or `127.0.0.1`. For standalone browser sign-in, use HTTPS tunnels.
+
+Example with `ngrok`:
+
+```txt
+frontend → https://<frontend>.ngrok-free.app -> http://localhost:5173
+backend  → https://<backend>.ngrok-free.app  -> http://localhost:3001
+```
+
+Then configure:
+
+Frontend `apps/frontend/.env`
+
+```env
+VITE_BETTER_AUTH_URL=https://<backend>.ngrok-free.app
+```
+
+Backend `apps/backend/.env`
+
+```env
+CORS_ORIGIN=https://<frontend>.ngrok-free.app
+BETTER_AUTH_URL=https://<backend>.ngrok-free.app
+```
+
+In BotFather, set the bot domain to the frontend hostname. Open the app via the frontend HTTPS tunnel, not localhost.
 
 ## Useful Scripts
 
 | Script | Purpose |
 |---|---|
-| `pnpm run dev` | start the frontend |
-| `pnpm run type-check` | frontend type-check |
+| `pnpm --filter frontend dev` | start the frontend |
+| `pnpm --filter frontend type-check` | frontend type-check |
+| `pnpm --filter backend dev` | start the backend |
+| `pnpm --filter backend test` | run backend tests |
 | `pnpm --filter @battle-circles/shared codegen` | regenerate shared frontend/backend TS types |
-| `pnpm run spacetime:generate` | regenerate frontend module bindings |
+| `pnpm --filter @battle-circles/spacetimedb generate` | regenerate frontend module bindings |
 | `pnpm run spacetime:start` | start local SpacetimeDB |
-| `pnpm run spacetime:publish:local <db>` | publish module to local server |
-| `pnpm --filter @battle-circles/spacetimedb exec tsc --noEmit` | type-check SpacetimeDB package |
+| `pnpm --filter @battle-circles/spacetimedb publish:local <db>` | publish the local SpacetimeDB module |
 
 ## Current State
 
 Working:
 - SpacetimeDB-backed lobby, countdown, and match lifecycle
 - Authoritative gameplay state from subscriptions
-- Eliminated-player result persistence via `player_result`
-- React + PIXI client still intact
+- Queue modes for guest and registered play
+- Backend wallet, ledger, catalog, inventory, and loadout APIs
+- Homepage shop/customizer flow and cosmetic-aware joins
 
 Still in progress:
-- further frontend performance work
-- removal of the remaining compatibility `gameState` paths
-- auth and payments
-- stable local SpacetimeDB identity/publish workflow
+- Telegram Login Widget and Telegram Mini App auth support
 - broader automated testing
-
-## Legacy Backend
-
-`backend/` is no longer the gameplay authority. Treat it as:
-- legacy transition code
-- a likely future home for auth, payment webhooks, entitlements, admin APIs, and external integrations
-
-Do not assume it is part of the active match loop.
+- more frontend performance work
+- further removal of compatibility `gameState` paths
+- live TON checkout and webhook reconciliation
+- long-term entitlement sync into match authority
+- more stable and better-documented local SpacetimeDB identity workflow
 
 ## Notes for Contributors
 
-- Edit `packages/shared/src/schema.ts` if the wire format changes.
-- Regenerate both shared TS types and module bindings after schema changes.
-- Do not hand-edit `src/module_bindings/`.
-- Prefer row-level state from `GameStore` over the compatibility `gameState`.
+- Edit `packages/shared/src/schema.ts` if the wire format changes
+- Regenerate shared TS types and Spacetime bindings after schema changes
+- Do not hand-edit `apps/frontend/src/module_bindings/`
+- Prefer row-level state from `GameStore` over compatibility `gameState`
+- Do not put wallet, inventory, or payment state into SpacetimeDB
 
 ## Roadmaps
 

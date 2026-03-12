@@ -1,72 +1,22 @@
 {
-  "name": "battle-circles",
+  "name": "battle-circles-monorepo",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "A multiplayer 2D webapp game where players compete to eat each other",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint . --ext ts,tsx --fix",
-    "preview": "vite preview",
-    "type-check": "tsc --noEmit",
-    "type-check:all": "pnpm --filter @battle-circles/shared type-check && pnpm type-check && pnpm --filter backend type-check",
-    "codegen": "pnpm --filter @battle-circles/shared codegen",
-    "spacetime:start": "spacetime start",
-    "spacetime:generate": "spacetime generate --lang typescript --out-dir src/module_bindings --module-path packages/spacetimedb",
-    "spacetime:publish:local": "spacetime publish --module-path packages/spacetimedb --server local",
-    "spacetime:publish": "spacetime publish --module-path packages/spacetimedb --server maincloud",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest",
-    "test:ui": "vitest --ui",
+    "type-check:all": "pnpm --filter @battle-circles/shared type-check && pnpm --filter frontend type-check && pnpm --filter backend type-check",
+    "codegen": "pnpm --filter @battle-circles/shared codegen",
+    "spacetime:start": "spacetime start -l '0.0.0.0:3002'",
+    "spacetime:generate": "pnpm --filter @battle-circles/spacetimedb generate",
+    "spacetime:publish:local": "pnpm --filter @battle-circles/spacetimedb publish:local",
+    "spacetime:publish": "pnpm --filter @battle-circles/spacetimedb publish",
     "prepare": "husky install"
   },
-  "dependencies": {
-    "@biomejs/biome": "^2.4.6",
-    "@pixi/react": "^8.0.5",
-    "@radix-ui/react-tabs": "^1.1.13",
-    "@tailwindcss/vite": "^4.2.1",
-    "better-auth": "^1.5.4",
-    "better-auth-telegram": "^1.5.0",
-    "clsx": "^2.0.0",
-    "lucide-react": "^0.294.0",
-    "pixi.js": "^8.16.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router-dom": "^6.20.1",
-    "socket.io-client": "^4.7.2",
-    "spacetimedb": "^2.0.2",
-    "tailwindcss": "^4.2.1",
-    "zustand": "^4.4.7"
-  },
   "devDependencies": {
-    "@types/react": "^19.1.4",
-    "@types/react-dom": "^19.1.4",
-    "@typescript-eslint/eslint-plugin": "^6.10.0",
-    "@typescript-eslint/parser": "^6.10.0",
-    "@vitejs/plugin-react": "^4.4.1",
-    "@vitest/ui": "^0.34.6",
-    "eslint": "^8.53.0",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "eslint-plugin-react-refresh": "^0.4.4",
     "husky": "^8.0.3",
-    "lint-staged": "^15.1.0",
-    "prettier": "^3.1.0",
-    "typescript": "^5.2.2",
-    "vite": "^6.3.5",
-    "vite-plugin-pwa": "^0.17.4",
-    "vitest": "^0.34.6"
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,css}": [
-      "prettier --write"
-    ]
+    "prettier": "^3.1.0"
   },
   "engines": {
     "node": ">=22.0.0",

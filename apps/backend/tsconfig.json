@@ -17,10 +17,10 @@
     /* Path aliases */
     "baseUrl": ".",
     "paths": {
-      "@battle-circles/shared": ["../packages/shared/src/index.ts"],
-      "@battle-circles/shared/events": ["../packages/shared/src/events.ts"],
-      "@battle-circles/shared/schema": ["../packages/shared/src/schema.ts"],
-      "@battle-circles/shared/validators": ["../packages/shared/src/validators.ts"]
+      "@battle-circles/shared": ["../../packages/shared/src/index.ts"],
+      "@battle-circles/shared/events": ["../../packages/shared/src/events.ts"],
+      "@battle-circles/shared/schema": ["../../packages/shared/src/schema.ts"],
+      "@battle-circles/shared/validators": ["../../packages/shared/src/validators.ts"]
     }
   },
   "include": ["src", "tests"]

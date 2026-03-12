@@ -7,15 +7,16 @@
  * Rules:
  *   1. Only touch this file when the wire format changes.
  *   2. After editing, run `pnpm --filter @battle-circles/shared codegen` to
- *      regenerate `backend/src/types/generated.ts` and `src/types/generated.ts`.
+ *      regenerate `apps/backend/src/types/generated.ts` and
+ *      `apps/frontend/src/types/generated.ts`.
  *   3. Do NOT import from the generated files inside this package — the schema
  *      is the source; generated files are downstream artefacts.
  *   4. All schemas use Zod v4 (same version as the backend).
  *
  * Consumers:
- *   - `backend/src/types/generated.ts`   (generated — do not edit by hand)
- *   - `src/types/generated.ts`            (generated — do not edit by hand)
- *   - `backend/src/networking/validators.ts` imports schemas directly for
+ *   - `apps/backend/src/types/generated.ts`   (generated — do not edit by hand)
+ *   - `apps/frontend/src/types/generated.ts`  (generated — do not edit by hand)
+ *   - `apps/backend/src/networking/validators.ts` imports schemas directly for
  *     runtime validation (no generation needed — it already imports from here
  *     once the alias is wired up).
  */
@@ -323,12 +324,12 @@ export const errorPayloadSchema = z.object({
 // These are the canonical types.  The codegen script (`scripts/codegen.ts`)
 // writes these same inferred shapes as plain interfaces into:
 //
-//   backend/src/types/generated.ts
-//   src/types/generated.ts
+//   apps/backend/src/types/generated.ts
+//   apps/frontend/src/types/generated.ts
 //
 // so that neither side needs to import Zod at all — they just use the plain
 // types.  The Zod schemas are only imported where runtime validation is
-// needed (i.e. in `backend/src/networking/validators.ts`).
+// needed (i.e. in `apps/backend/src/networking/validators.ts`).
 
 export type Vector2D = z.infer<typeof vector2DSchema>
 export type Boundary = z.infer<typeof boundarySchema>

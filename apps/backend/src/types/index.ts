@@ -1,5 +1,5 @@
 /**
- * backend/src/types/index.ts
+ * apps/backend/src/types/index.ts
  *
  * All wire-format types now come from the generated file produced by the
  * codegen script in packages/shared.  Do NOT add new hand-written types here.
@@ -7,8 +7,8 @@
  * To change a type:
  *   1. Edit packages/shared/src/schema.ts
  *   2. Run: pnpm --filter @battle-circles/shared codegen
- *   3. Commit packages/shared/src/schema.ts AND backend/src/types/generated.ts
- *      AND src/types/generated.ts together.
+ *   3. Commit packages/shared/src/schema.ts AND apps/backend/src/types/generated.ts
+ *      AND apps/frontend/src/types/generated.ts together.
  *
  * To add a backend-only type (not part of the wire format — e.g. an internal
  * engine structure) add it below the re-export block with a clear comment.

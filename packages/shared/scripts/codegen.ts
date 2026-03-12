@@ -8,8 +8,8 @@
  * plain TypeScript files containing only interface / type alias declarations
  * (no Zod dependency at all):
  *
- *   ../../backend/src/types/generated.ts
- *   ../../src/types/generated.ts
+ *   ../../apps/backend/src/types/generated.ts
+ *   ../../apps/frontend/src/types/generated.ts
  *
  * Run:
  *   pnpm --filter @battle-circles/shared codegen
@@ -45,8 +45,8 @@ const __dirname = dirname(__filename)
 
 // ── Output paths ────────────────────────────────────────────────────────────
 
-const BACKEND_OUT = resolve(__dirname, '../../../backend/src/types/generated.ts')
-const FRONTEND_OUT = resolve(__dirname, '../../../src/types/generated.ts')
+const BACKEND_OUT = resolve(__dirname, '../../../apps/backend/src/types/generated.ts')
+const FRONTEND_OUT = resolve(__dirname, '../../../apps/frontend/src/types/generated.ts')
 
 // ── Generated file header ────────────────────────────────────────────────────
 
@@ -433,8 +433,8 @@ function write(outputPath: string, extraSection: string, label: string): void {
 console.log('🔧  Battle Circles — codegen')
 console.log('    Source: packages/shared/src/schema.ts\n')
 
-write(BACKEND_OUT, BACKEND_EXTRA, 'backend/src/types/generated.ts')
-write(FRONTEND_OUT, FRONTEND_EXTRA, 'src/types/generated.ts')
+write(BACKEND_OUT, BACKEND_EXTRA, 'apps/backend/src/types/generated.ts')
+write(FRONTEND_OUT, FRONTEND_EXTRA, 'apps/frontend/src/types/generated.ts')
 
 console.log('\n✨  Done. Commit both generated files together with any schema changes.')
 console.log('    Run `pnpm type-check` in each package to verify the generated types compile.\n')

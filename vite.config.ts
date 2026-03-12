@@ -63,6 +63,9 @@ export default defineConfig({
   server: {
     port: process.env.PORT ? parseInt(process.env.PORT, 10) : 3000,
     host: true,
+    // Allow ngrok and other tunnel/proxy hostnames during development.
+    // Vite's dev server is never used in production, so this is safe.
+    allowedHosts: true,
   },
   build: {
     target: 'esnext',

@@ -1,9 +1,26 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Coins, Info, Palette, Play, Shield, ShoppingBag, Sparkles, Users, Wallet } from 'lucide-react'
+import {
+  Coins,
+  Info,
+  Palette,
+  Play,
+  Shield,
+  ShoppingBag,
+  Sparkles,
+  Users,
+  Wallet,
+} from 'lucide-react'
 import { useSocketStore } from '@/stores/SocketStore'
 import { useGameStore } from '@/stores/GameStore'
-import { backendApi, type CatalogItem, type LoadoutSummary, type QueueMode, type ViewerSummary, type WalletSummary } from '@/lib/backend-api'
+import {
+  backendApi,
+  type CatalogItem,
+  type LoadoutSummary,
+  type QueueMode,
+  type ViewerSummary,
+  type WalletSummary,
+} from '@/lib/backend-api'
 
 const DEFAULT_GUEST_LOADOUT: LoadoutSummary = {
   equippedSkinId: null,
@@ -33,26 +50,31 @@ const QUEUE_COPY: Record<
 > = {
   guest: {
     title: 'Guest Queue',
-    description: 'Play immediately with a default blob. No persistent coins, inventory, or registered progression.',
+    description:
+      'Play immediately with a default blob. No persistent coins, inventory, or registered progression.',
     badge: 'Browse + play',
     requiresRegistered: false,
   },
   competitive: {
     title: 'Competitive Queue',
-    description: 'Registered-only fair matches. Cosmetics apply, but future combat entitlements stay disabled here.',
+    description:
+      'Registered-only fair matches. Cosmetics apply, but future combat entitlements stay disabled here.',
     badge: 'Registered only',
     requiresRegistered: true,
   },
   casual_powerups: {
     title: 'Casual Powerups',
-    description: 'Registered-only social queue reserved for future entitlement-based experiments. Cosmetics ship first.',
+    description:
+      'Registered-only social queue reserved for future entitlement-based experiments. Cosmetics ship first.',
     badge: 'Registered only',
     requiresRegistered: true,
   },
 }
 
 const storageKeyForViewer = (viewer: ViewerSummary | null) =>
-  viewer?.isRegistered ? 'battle-circles:last-queue:registered' : 'battle-circles:last-queue:anonymous'
+  viewer?.isRegistered
+    ? 'battle-circles:last-queue:registered'
+    : 'battle-circles:last-queue:anonymous'
 
 const isQueueAllowed = (viewer: ViewerSummary | null, queue: QueueMode) =>
   queue === 'guest' || Boolean(viewer?.isRegistered)
@@ -78,6 +100,7 @@ const HomePage: React.FC = () => {
   const [joinError, setJoinError] = useState<string | null>(null)
   const [commerceMessage, setCommerceMessage] = useState<string | null>(null)
   const [isRefreshingEconomy, setIsRefreshingEconomy] = useState(true)
+  const [isTelegramWidgetLoading, setIsTelegramWidgetLoading] = useState(false)
   const navigate = useNavigate()
 
   const { connect, joinGame, isConnected, connectionStatus } = useSocketStore()
@@ -88,6 +111,7 @@ const HomePage: React.FC = () => {
     reject: (reason: string) => void
   } | null>(null)
   const connectionStatusRef = useRef(connectionStatus)
+  const telegramWidgetInitializedRef = useRef(false)
 
   useEffect(() => {
     connectionStatusRef.current = connectionStatus
@@ -173,7 +197,11 @@ const HomePage: React.FC = () => {
     const key = storageKeyForViewer(viewer)
     const stored = window.localStorage.getItem(key) as QueueMode | null
     const nextQueue =
-      stored && isQueueAllowed(viewer, stored) ? stored : viewer?.isRegistered ? 'competitive' : 'guest'
+      stored && isQueueAllowed(viewer, stored)
+        ? stored
+        : viewer?.isRegistered
+          ? 'competitive'
+          : 'guest'
     setSelectedQueue(nextQueue)
   }, [viewer?.isRegistered])
 
@@ -192,15 +220,21 @@ const HomePage: React.FC = () => {
   const selectedRoomId = ROOM_BY_QUEUE[selectedQueue]
   const tokenBalance = wallet?.balance ?? 0
   const shopSkins = useMemo(() => catalog.filter(item => item.category === 'SKIN'), [catalog])
-  const shopColors = useMemo(() => catalog.filter(item => item.category === 'COLOR_PACK'), [catalog])
+  const shopColors = useMemo(
+    () => catalog.filter(item => item.category === 'COLOR_PACK'),
+    [catalog]
+  )
 
   const signInRequiredMessage =
     'Registered queues, purchases, and custom loadouts require a Telegram-linked account.'
+  const isMiniAppContext = Boolean(window.Telegram?.WebApp?.initData)
 
   const handleTelegramSignIn = async () => {
     const initData = window.Telegram?.WebApp?.initData
     if (!initData) {
-      setCommerceMessage('Telegram sign-in is only available inside the Telegram Mini App context.')
+      setCommerceMessage(
+        'Use the Telegram Login Widget below when signing in from a normal browser.'
+      )
       return
     }
 
@@ -229,6 +263,85 @@ const HomePage: React.FC = () => {
       setCommerceMessage(error instanceof Error ? error.message : 'Telegram sign-in failed.')
     }
   }
+
+  useEffect(() => {
+    if (viewer?.isRegistered || isMiniAppContext || telegramWidgetInitializedRef.current) {
+      return
+    }
+
+    let cancelled = false
+    const widgetContainer = document.getElementById('telegram-login-container')
+    if (!widgetContainer) {
+      return
+    }
+
+    widgetContainer.innerHTML = ''
+    setIsTelegramWidgetLoading(true)
+
+    const initWidget = async () => {
+      try {
+        const { authClient } = await import('@/lib/auth-client')
+        const telegramClient = authClient as unknown as {
+          initTelegramWidget?: (
+            containerId: string,
+            options: {
+              size?: 'large' | 'medium' | 'small'
+              cornerRadius?: number
+              showUserPhoto?: boolean
+            },
+            onAuth: (authData: unknown) => Promise<void>
+          ) => Promise<void>
+          signInWithTelegram?: (
+            authData: unknown
+          ) => Promise<{ data: unknown; error: null } | { data: null; error: { message?: string } }>
+        }
+
+        if (!telegramClient.initTelegramWidget || !telegramClient.signInWithTelegram) {
+          throw new Error('Telegram Login Widget is not available in the current auth client.')
+        }
+
+        await telegramClient.initTelegramWidget(
+          'telegram-login-container',
+          { size: 'large', cornerRadius: 12, showUserPhoto: true },
+          async authData => {
+            const result = await telegramClient.signInWithTelegram!(authData)
+            if (result.error) {
+              setCommerceMessage(result.error.message ?? 'Telegram sign-in failed.')
+              return
+            }
+
+            setCommerceMessage('Telegram account linked. Refreshing queue and wallet access…')
+            await refreshEconomy()
+          }
+        )
+
+        if (!cancelled) {
+          telegramWidgetInitializedRef.current = true
+          setCommerceMessage(
+            'Use the Telegram Login Widget below to unlock registered queues and wallet features.'
+          )
+        }
+      } catch (error) {
+        console.log(error)
+
+        if (!cancelled) {
+          setCommerceMessage(
+            error instanceof Error ? error.message : 'Failed to initialize Telegram Login Widget.'
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setIsTelegramWidgetLoading(false)
+        }
+      }
+    }
+
+    void initWidget()
+
+    return () => {
+      cancelled = true
+    }
+  }, [viewer?.isRegistered, isMiniAppContext])
 
   const handleJoinGame = async () => {
     if (!playerName.trim()) {
@@ -264,7 +377,7 @@ const HomePage: React.FC = () => {
 
       await joinGame(playerName.trim(), {
         roomId: selectedRoomId,
-        skinId: viewer?.isRegistered ? loadout.applied.skinId ?? undefined : undefined,
+        skinId: viewer?.isRegistered ? (loadout.applied.skinId ?? undefined) : undefined,
         color: viewer?.isRegistered ? loadout.applied.color : DEFAULT_GUEST_LOADOUT.applied.color,
       })
 
@@ -407,7 +520,8 @@ const HomePage: React.FC = () => {
                 <h1>Battle Circles</h1>
               </div>
               <p className='mt-2 text-[1.05rem] text-white/80'>
-                Telegram and TON-native economy foundation with a guest queue that stays open for browsing and drop-in play.
+                Telegram and TON-native economy foundation with a guest queue that stays open for
+                browsing and drop-in play.
               </p>
             </div>
 
@@ -422,10 +536,10 @@ const HomePage: React.FC = () => {
               <div className='rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/80'>
                 {viewer?.isRegistered ? 'Registered account' : 'Anonymous browser / guest'}
               </div>
-              {!viewer?.isRegistered && (
+              {!viewer?.isRegistered && isMiniAppContext && (
                 <button className='btn btn-secondary' type='button' onClick={handleTelegramSignIn}>
                   <Wallet size={16} />
-                  Link Telegram
+                  Link Telegram Mini App
                 </button>
               )}
             </div>
@@ -436,9 +550,30 @@ const HomePage: React.FC = () => {
                 TON / Telegram Wallet Path
               </div>
               <p className='mt-2 text-sm leading-6 text-cyan-100/80'>
-                Paid purchases are designed around Telegram-native TON checkout. In this phase, coin spending works now and TON checkout records pending references for later reconciliation.
+                Paid purchases are designed around Telegram-native TON checkout. In this phase, coin
+                spending works now and TON checkout records pending references for later
+                reconciliation.
               </p>
             </div>
+
+            {!viewer?.isRegistered && !isMiniAppContext && (
+              <div className='mb-6 rounded-2xl border border-white/10 bg-white/5 p-4'>
+                <div className='mb-3 flex items-center gap-2 text-[0.95rem] font-semibold text-white'>
+                  <Wallet size={18} />
+                  Sign In With Telegram
+                </div>
+                <p className='mb-4 text-sm leading-6 text-white/75'>
+                  This browser flow uses Telegram Login Widget rather than the Mini App auth path.
+                </p>
+                {isTelegramWidgetLoading && (
+                  <div className='mb-3 text-sm text-white/60'>Loading Telegram widget…</div>
+                )}
+                <div
+                  id='telegram-login-container'
+                  className='flex min-h-[56px] items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/20 px-3 py-4'
+                />
+              </div>
+            )}
 
             <div className='mb-6'>
               <label className='mb-2 block text-sm font-semibold uppercase tracking-[0.16em] text-white/60'>
@@ -550,10 +685,15 @@ const HomePage: React.FC = () => {
                 <div>
                   <h2 className='text-[1.3rem] font-semibold text-white'>Coins & Progression</h2>
                   <p className='mt-1 text-sm text-white/70'>
-                    Anonymous users can browse the economy. Registered Telegram users unlock balances, claims, purchases, and persistent cosmetics.
+                    Anonymous users can browse the economy. Registered Telegram users unlock
+                    balances, claims, purchases, and persistent cosmetics.
                   </p>
                 </div>
-                <button className='btn btn-secondary' type='button' onClick={handleClaimDailyReward}>
+                <button
+                  className='btn btn-secondary'
+                  type='button'
+                  onClick={handleClaimDailyReward}
+                >
                   <Coins size={16} />
                   Daily Claim
                 </button>
@@ -563,17 +703,29 @@ const HomePage: React.FC = () => {
                 <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
                   <div className='text-xs uppercase tracking-[0.16em] text-white/45'>Balance</div>
                   <div className='mt-3 text-3xl font-semibold text-white'>{tokenBalance}</div>
-                  <div className='mt-2 text-sm text-white/60'>Single coin balance for earned and future purchased value.</div>
+                  <div className='mt-2 text-sm text-white/60'>
+                    Single coin balance for earned and future purchased value.
+                  </div>
                 </div>
                 <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
-                  <div className='text-xs uppercase tracking-[0.16em] text-white/45'>Applied Skin</div>
-                  <div className='mt-3 text-lg font-semibold text-white'>{loadout.applied.skinId ?? 'guest-default'}</div>
-                  <div className='mt-2 text-sm text-white/60'>Carried into registered lobbies and matches via `join_game` appearance fields.</div>
+                  <div className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                    Applied Skin
+                  </div>
+                  <div className='mt-3 text-lg font-semibold text-white'>
+                    {loadout.applied.skinId ?? 'guest-default'}
+                  </div>
+                  <div className='mt-2 text-sm text-white/60'>
+                    Carried into registered lobbies and matches via `join_game` appearance fields.
+                  </div>
                 </div>
                 <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
-                  <div className='text-xs uppercase tracking-[0.16em] text-white/45'>Wallet Rail</div>
+                  <div className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                    Wallet Rail
+                  </div>
                   <div className='mt-3 text-lg font-semibold text-white'>Telegram TON</div>
-                  <div className='mt-2 text-sm text-white/60'>Primary checkout path for future paid purchases and token packs.</div>
+                  <div className='mt-2 text-sm text-white/60'>
+                    Primary checkout path for future paid purchases and token packs.
+                  </div>
                 </div>
               </div>
 
@@ -590,10 +742,20 @@ const HomePage: React.FC = () => {
                 Match Rules
               </div>
               <ul className='space-y-3 text-sm leading-6 text-white/75'>
-                <li>Guest queue is open to anonymous users and does not write persistent economy state.</li>
-                <li>Competitive and casual-powerups queues are reserved for registered accounts.</li>
-                <li>Cosmetics ship first. Future spit-ammo entitlements stay out of competitive mode.</li>
-                <li>Backend keeps wallet, ledger, catalog, inventory, and loadouts; SpacetimeDB only receives match-ready appearance data.</li>
+                <li>
+                  Guest queue is open to anonymous users and does not write persistent economy
+                  state.
+                </li>
+                <li>
+                  Competitive and casual-powerups queues are reserved for registered accounts.
+                </li>
+                <li>
+                  Cosmetics ship first. Future spit-ammo entitlements stay out of competitive mode.
+                </li>
+                <li>
+                  Backend keeps wallet, ledger, catalog, inventory, and loadouts; SpacetimeDB only
+                  receives match-ready appearance data.
+                </li>
               </ul>
             </div>
           </div>
@@ -606,10 +768,7 @@ const HomePage: React.FC = () => {
               </div>
               <div className='grid gap-3'>
                 {catalog.map(item => (
-                  <div
-                    key={item.id}
-                    className='rounded-2xl border border-white/10 bg-white/5 p-4'
-                  >
+                  <div key={item.id} className='rounded-2xl border border-white/10 bg-white/5 p-4'>
                     <div className='flex flex-wrap items-start justify-between gap-4'>
                       <div className='flex items-start gap-4'>
                         <div
@@ -632,7 +791,9 @@ const HomePage: React.FC = () => {
                           <div className='mt-1 text-sm text-white/70'>{item.description}</div>
                           <div className='mt-2 text-xs uppercase tracking-[0.16em] text-white/45'>
                             {item.price.coins !== null ? `${item.price.coins} coins` : 'TON only'}
-                            {item.price.ton.amountNano ? ` • ${item.price.ton.amountNano} nanoTON` : ''}
+                            {item.price.ton.amountNano
+                              ? ` • ${item.price.ton.amountNano} nanoTON`
+                              : ''}
                           </div>
                         </div>
                       </div>
@@ -695,7 +856,9 @@ const HomePage: React.FC = () => {
                     style={{ backgroundColor: loadout.applied.color }}
                   />
                   <div>
-                    <div className='text-lg font-semibold text-white'>{loadout.applied.skinId ?? 'guest-default'}</div>
+                    <div className='text-lg font-semibold text-white'>
+                      {loadout.applied.skinId ?? 'guest-default'}
+                    </div>
                     <div className='text-sm text-white/65'>{loadout.applied.color}</div>
                   </div>
                 </div>
@@ -729,25 +892,27 @@ const HomePage: React.FC = () => {
                       Owned Colors
                     </div>
                     <div className='grid gap-2'>
-                      {(viewer?.isRegistered ? loadout.colors : shopColors.slice(0, 2)).map(item => (
-                        <button
-                          key={item.id}
-                          type='button'
-                          className='flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/8'
-                          onClick={() => handleEquipColor(item.id)}
-                        >
-                          <span className='flex items-center gap-3 text-sm text-white'>
-                            <span
-                              className='h-4 w-4 rounded-full border border-white/30'
-                              style={{ backgroundColor: item.previewColor ?? '#2E90FF' }}
-                            />
-                            {item.name}
-                          </span>
-                          <span className='text-xs uppercase tracking-[0.16em] text-white/45'>
-                            {loadout.equippedColorId === item.id ? 'Active' : 'Equip'}
-                          </span>
-                        </button>
-                      ))}
+                      {(viewer?.isRegistered ? loadout.colors : shopColors.slice(0, 2)).map(
+                        item => (
+                          <button
+                            key={item.id}
+                            type='button'
+                            className='flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/8'
+                            onClick={() => handleEquipColor(item.id)}
+                          >
+                            <span className='flex items-center gap-3 text-sm text-white'>
+                              <span
+                                className='h-4 w-4 rounded-full border border-white/30'
+                                style={{ backgroundColor: item.previewColor ?? '#2E90FF' }}
+                              />
+                              {item.name}
+                            </span>
+                            <span className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                              {loadout.equippedColorId === item.id ? 'Active' : 'Equip'}
+                            </span>
+                          </button>
+                        )
+                      )}
                     </div>
                   </div>
                 </div>
@@ -759,7 +924,8 @@ const HomePage: React.FC = () => {
                   Registration Gate
                 </div>
                 <p className='mt-2 leading-6'>
-                  Anonymous users can browse the catalog and play the guest queue. Registered games and persistent cosmetics are reserved for Telegram-linked sessions.
+                  Anonymous users can browse the catalog and play the guest queue. Registered games
+                  and persistent cosmetics are reserved for Telegram-linked sessions.
                 </p>
               </div>
             </div>

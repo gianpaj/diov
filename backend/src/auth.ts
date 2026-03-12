@@ -34,6 +34,7 @@ export const auth = betterAuth({
     telegram({
       botToken: config.TELEGRAM_BOT_TOKEN,
       botUsername: config.TELEGRAM_BOT_USERNAME,
+      loginWidget: true,
       miniApp: { enabled: true },
     }),
   ],

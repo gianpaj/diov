@@ -23,7 +23,14 @@ const intFromEnv = (defaultValue: number, name: string) =>
 const EnvSchema = z.object({
   PORT: intFromEnv(3001, 'PORT'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  CORS_ORIGIN: z.string().optional().default('*'),
+  CORS_ORIGIN: z
+    .string()
+    .optional()
+    .default('http://localhost:5173')
+    .refine(v => v !== '*', {
+      message:
+        'CORS_ORIGIN must be an explicit origin (e.g. https://example.com). Wildcard "*" is not allowed.',
+    }),
 
   // ── Better Auth ────────────────────────────────────────────────────────────
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),

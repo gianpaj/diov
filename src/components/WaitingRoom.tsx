@@ -262,8 +262,10 @@ const WaitingRoom: React.FC = () => {
             <div className='flex items-center gap-3 p-[15px] bg-white/5 rounded-[10px] border border-white/10'>
               <Play size={20} />
               <div>
-                <h4 className='m-0 mb-0.5 text-white text-[0.95em]'>Auto Start</h4>
-                <p className='m-0 text-white/70 text-[0.85em]'>When {minPlayers}+ join</p>
+                <h4 className='m-0 mb-0.5 text-white text-[0.95em]'>Queue Mode</h4>
+                <p className='m-0 text-white/70 text-[0.85em]'>
+                  {roomState?.mode ?? 'guest'} • {minPlayers}+ players
+                </p>
               </div>
             </div>
           </div>

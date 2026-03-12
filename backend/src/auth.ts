@@ -11,7 +11,9 @@ export const auth = betterAuth({
   },
   secret: config.BETTER_AUTH_SECRET,
   baseURL: config.BETTER_AUTH_URL,
-  trustedOrigins: [config.CORS_ORIGIN],
+  trustedOrigins: [config.CORS_ORIGIN].filter(
+    (origin): origin is string => typeof origin === 'string' && origin !== '*' && origin.length > 0
+  ),
 
   socialProviders: {
     discord: {

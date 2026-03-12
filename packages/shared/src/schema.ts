@@ -50,6 +50,8 @@ export const inputVectorSchema = z.object({
 
 // ── Room / game status ─────────────────────────────────────────────────────
 
+export const roomModeSchema = z.enum(['guest', 'competitive', 'casual_powerups'])
+
 /**
  * Canonical set of room statuses.
  *
@@ -71,6 +73,7 @@ export const playerStateSchema = z.object({
   size: z.number(),
   /** CSS colour string, e.g. "#FF6B6B". */
   color: z.string(),
+  skinId: z.string().optional(),
   isAlive: z.boolean(),
   score: z.number().int(),
   lastSplitTime: z.number(),
@@ -100,6 +103,7 @@ export const spitBlobStateSchema = z.object({
 
 export const roomStateSchema = z.object({
   id: roomId,
+  mode: roomModeSchema,
   status: roomStatusSchema,
   hostId: z.string().optional(),
   countdownEndsAt: z.number().optional(),
@@ -122,6 +126,7 @@ export const playerRowStateSchema = z.object({
   input: inputVectorSchema,
   size: z.number(),
   color: z.string(),
+  skinId: z.string().optional(),
   score: z.number().int(),
   isAlive: z.boolean(),
   lastSplitTime: z.number(),
@@ -228,6 +233,8 @@ export const joinGamePayloadSchema = z.object({
   playerName: z.string().min(1).max(32),
   /** Defaults to "global" on the backend if omitted. */
   roomId: z.string().optional(),
+  skinId: z.string().optional(),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
 })
 
 // ── Server → client payloads ───────────────────────────────────────────────
@@ -326,6 +333,7 @@ export const errorPayloadSchema = z.object({
 export type Vector2D = z.infer<typeof vector2DSchema>
 export type Boundary = z.infer<typeof boundarySchema>
 export type InputVector = z.infer<typeof inputVectorSchema>
+export type RoomMode = z.infer<typeof roomModeSchema>
 export type RoomStatus = z.infer<typeof roomStatusSchema>
 export type RoomState = z.infer<typeof roomStateSchema>
 export type PlayerState = z.infer<typeof playerStateSchema>

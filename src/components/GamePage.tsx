@@ -16,14 +16,6 @@ import ActionButtons from '@/components/game/ActionButtons'
 import GameOverScreen from '@/components/game/GameOverScreen'
 import type { KnibbleRowState, PlayerRowState, SpitBlobRowState, Vector2D } from '@/types'
 
-const PLAYER_RENDER_PALETTE = [
-  { base: '#D9DCE3', edge: '#2E90FF', highlight: '#F6F8FC', texture: '#A8D4FF' },
-  { base: '#E5E0D8', edge: '#FF7A18', highlight: '#FFF4E7', texture: '#FFD1A8' },
-  { base: '#DBE7D8', edge: '#2FBF71', highlight: '#F4FFF1', texture: '#B8E8C7' },
-  { base: '#E4DAE7', edge: '#A855F7', highlight: '#FBF5FF', texture: '#D8B4FE' },
-  { base: '#E7D8DB', edge: '#F43F5E', highlight: '#FFF1F4', texture: '#F9A8B8' },
-] as const
-
 const KNIBBLE_RENDER_PALETTE = [
   '#16F2F2',
   '#68FF2B',
@@ -48,9 +40,27 @@ const hashString = (value: string): number => {
 
 const hexToNumber = (hex: string): number => Number.parseInt(hex.replace('#', ''), 16)
 
-const getPlayerVisual = (playerId: string) => {
-  const hashed = hashString(playerId)
-  return PLAYER_RENDER_PALETTE[hashed % PLAYER_RENDER_PALETTE.length] ?? PLAYER_RENDER_PALETTE[0]
+const tintChannel = (value: number, delta: number) => Math.max(0, Math.min(255, value + delta))
+
+const tintHex = (hex: string, delta: number) => {
+  const normalized = hex.startsWith('#') ? hex.slice(1) : hex
+  const safe = normalized.length === 6 ? normalized : '2E90FF'
+  const red = tintChannel(Number.parseInt(safe.slice(0, 2), 16), delta)
+  const green = tintChannel(Number.parseInt(safe.slice(2, 4), 16), delta)
+  const blue = tintChannel(Number.parseInt(safe.slice(4, 6), 16), delta)
+  return `#${[red, green, blue].map(channel => channel.toString(16).padStart(2, '0')).join('')}`
+}
+
+const getPlayerVisual = (player: PlayerRowState) => {
+  const accentSeed = hashString(player.skinId ?? player.id)
+  const accentDelta = ((accentSeed % 5) - 2) * 10
+  const base = tintHex(player.color, 18 + accentDelta)
+  return {
+    base,
+    edge: tintHex(player.color, -24),
+    highlight: tintHex(base, 34),
+    texture: tintHex(player.color, -4),
+  }
 }
 
 const getKnibbleColor = (knibbleId: string) =>
@@ -323,9 +333,9 @@ const GamePage: React.FC = () => {
   const renderPlayer = (player: PlayerRowState) => {
     const screenX = player.position.x - cameraPosition.x + dimensions.width / 2
     const screenY = player.position.y - cameraPosition.y + dimensions.height / 2
-    const visual = getPlayerVisual(player.id)
+    const visual = getPlayerVisual(player)
     const displaySize = player.size * getPlayerPulseScale(player.id)
-    const textureSeed = hashString(player.id)
+    const textureSeed = hashString(`${player.id}:${player.skinId ?? 'classic'}`)
     const textureOffsetA = ((textureSeed % 7) - 3) * 0.12
     const textureOffsetB = (((textureSeed >> 3) % 7) - 3) * 0.1
     const edgeColor = hexToNumber(visual.edge)

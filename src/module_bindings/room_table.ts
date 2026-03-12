@@ -12,6 +12,7 @@ import {
 
 export default __t.row({
   id: __t.string().primaryKey(),
+  mode: __t.string(),
   status: __t.string(),
   hostIdentity: __t.option(__t.identity()).name("host_identity"),
   countdownEndsAt: __t.option(__t.i64()).name("countdown_ends_at"),

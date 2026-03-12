@@ -22,6 +22,7 @@ export default __t.row({
   inputX: __t.f64().name("input_x"),
   inputY: __t.f64().name("input_y"),
   color: __t.string(),
+  skinId: __t.option(__t.string()).name("skin_id"),
   score: __t.u32(),
   isAlive: __t.bool().name("is_alive"),
   lastSplitAt: __t.i64().name("last_split_at"),

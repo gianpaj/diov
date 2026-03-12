@@ -3,5 +3,5 @@ import { config } from './config.ts'
 
 export const db = createClient({
   url: config.TURSO_DATABASE_URL,
-  authToken: config.TURSO_AUTH_TOKEN,
+  authToken: config.TURSO_AUTH_TOKEN || undefined,
 })

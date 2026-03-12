@@ -1,7 +1,9 @@
 import { ScheduleAt } from 'spacetimedb'
 import { schema, SenderError, t, table } from 'spacetimedb/server'
 
-const DEFAULT_ROOM_ID = 'global'
+const DEFAULT_ROOM_ID = 'guest-global'
+const COMPETITIVE_ROOM_ID = 'competitive-global'
+const CASUAL_POWERUPS_ROOM_ID = 'casual-global'
 const WORLD_WIDTH = 2000
 const WORLD_HEIGHT = 2000
 const TICK_INTERVAL_MS = 50n
@@ -22,6 +24,7 @@ const room = table(
   },
   {
     id: t.string().primaryKey(),
+    mode: t.string(),
     status: t.string(),
     hostIdentity: t.identity().optional(),
     countdownEndsAt: t.i64().optional(),
@@ -57,6 +60,7 @@ const player = table(
     inputX: t.f64(),
     inputY: t.f64(),
     color: t.string(),
+    skinId: t.string().optional(),
     score: t.u32(),
     isAlive: t.bool(),
     lastSplitAt: t.i64(),
@@ -165,6 +169,31 @@ function randomHexColor(random: () => number): string {
   return KNIBBLE_COLORS[Math.floor(random() * KNIBBLE_COLORS.length)] ?? '#FFD93D'
 }
 
+function modeForRoomId(roomId: string): string {
+  if (roomId === COMPETITIVE_ROOM_ID) {
+    return 'competitive'
+  }
+  if (roomId === CASUAL_POWERUPS_ROOM_ID) {
+    return 'casual_powerups'
+  }
+  return 'guest'
+}
+
+function sanitizeColor(color?: string): string {
+  if (color && /^#[0-9A-Fa-f]{6}$/.test(color)) {
+    return color
+  }
+  return '#2E90FF'
+}
+
+function sanitizeSkinId(skinId?: string): string | undefined {
+  const clean = skinId?.trim()
+  if (!clean) {
+    return undefined
+  }
+  return clean.slice(0, 64)
+}
+
 function currentTimeMs(ctx: any): bigint {
   return nowMicros(ctx) / 1000n
 }
@@ -193,6 +222,7 @@ function ensureRoom(ctx: any, roomId: string) {
 
   const created = {
     id: roomId,
+    mode: modeForRoomId(roomId),
     status: 'waiting',
     hostIdentity: undefined,
     countdownEndsAt: undefined,
@@ -220,11 +250,18 @@ function randomSpawn(ctx: any, radius: number): { x: number; y: number } {
   }
 }
 
-function upsertPlayer(ctx: any, roomId: string, name: string) {
+function upsertPlayer(
+  ctx: any,
+  roomId: string,
+  name: string,
+  appearance?: { color?: string; skinId?: string }
+) {
   const existing = ctx.db.player.identity.find(ctx.sender)
   const spawn = randomSpawn(ctx, PLAYER_START_RADIUS)
   const cleanName = name.trim().slice(0, MAX_NAME_LENGTH) || 'Anonymous'
   const timestampMs = currentTimeMs(ctx)
+  const nextColor = sanitizeColor(appearance?.color ?? existing?.color)
+  const nextSkinId = sanitizeSkinId(appearance?.skinId ?? existing?.skinId)
 
   if (existing) {
     const updated = {
@@ -238,6 +275,8 @@ function upsertPlayer(ctx: any, roomId: string, name: string) {
       velY: 0,
       inputX: 0,
       inputY: 0,
+      color: nextColor,
+      skinId: nextSkinId,
       score: 0,
       isAlive: true,
       joinedAt: timestampMs,
@@ -257,7 +296,8 @@ function upsertPlayer(ctx: any, roomId: string, name: string) {
     velY: 0,
     inputX: 0,
     inputY: 0,
-    color: randomHexColor(() => ctx.random()),
+    color: nextColor,
+    skinId: nextSkinId,
     score: 0,
     isAlive: true,
     lastSplitAt: 0n,
@@ -463,8 +503,13 @@ function resetPlayersForNewMatch(ctx: any, roomId: string) {
 }
 
 export const join_game = battleCircles.reducer(
-  { roomId: t.string().optional(), playerName: t.string() },
-  (ctx, { roomId, playerName }) => {
+  {
+    roomId: t.string().optional(),
+    playerName: t.string(),
+    skinId: t.string().optional(),
+    color: t.string().optional(),
+  },
+  (ctx, { roomId, playerName, skinId, color }) => {
     const targetRoomId = roomId?.trim() || DEFAULT_ROOM_ID
     let currentRoom = ensureRoom(ctx, targetRoomId)
     const count = roomPlayerCount(ctx, targetRoomId)
@@ -477,7 +522,7 @@ export const join_game = battleCircles.reducer(
       throw new SenderError('Room is full')
     }
 
-    const playerRow = upsertPlayer(ctx, targetRoomId, playerName)
+    const playerRow = upsertPlayer(ctx, targetRoomId, playerName, { skinId, color })
     const refreshedRoom = ctx.db.room.id.find(targetRoomId)!
 
     if (!refreshedRoom.hostIdentity) {
@@ -699,7 +744,11 @@ export const process_tick = battleCircles.reducer({ arg: gameTick.rowType }, (ct
 
 export const init = battleCircles.init((ctx) => {
   ensureRoom(ctx, DEFAULT_ROOM_ID)
+  ensureRoom(ctx, COMPETITIVE_ROOM_ID)
+  ensureRoom(ctx, CASUAL_POWERUPS_ROOM_ID)
   maintainKnibbles(ctx, DEFAULT_ROOM_ID)
+  maintainKnibbles(ctx, COMPETITIVE_ROOM_ID)
+  maintainKnibbles(ctx, CASUAL_POWERUPS_ROOM_ID)
 })
 
 export const on_connect = battleCircles.clientConnected((_ctx) => {})

@@ -25,7 +25,7 @@ import {
 } from '@/types'
 import { DbConnection, type ErrorContext, type SubscriptionHandle } from '@/module_bindings'
 
-const DEFAULT_ROOM_ID = 'global'
+const DEFAULT_ROOM_ID = 'guest-global'
 const DEFAULT_SPACETIMEDB_HOST = import.meta.env.VITE_SPACETIMEDB_HOST || 'ws://localhost:3000'
 const DEFAULT_SPACETIMEDB_DB_NAME = import.meta.env.VITE_SPACETIMEDB_DB_NAME || 'battle-circles'
 
@@ -52,6 +52,7 @@ const toMillis = (value?: bigint | null): number | undefined =>
 
 const toRoomState = (row: any): RoomState => ({
   id: row.id,
+  mode: row.mode as RoomState['mode'],
   status: row.status as RoomState['status'],
   hostId: row.hostIdentity?.toHexString(),
   countdownEndsAt: toMillis(row.countdownEndsAt),
@@ -79,6 +80,7 @@ const toPlayerRowState = (row: any): PlayerRowState => ({
   input: { x: row.inputX, y: row.inputY },
   size: row.radius,
   color: row.color,
+  skinId: row.skinId ?? undefined,
   score: row.score,
   isAlive: row.isAlive,
   lastSplitTime: Number(row.lastSplitAt),
@@ -126,6 +128,7 @@ const toPlayerState = (row: any) => ({
   velocity: row.velocity,
   size: row.size,
   color: row.color,
+  skinId: row.skinId,
   isAlive: row.isAlive,
   score: row.score,
   lastSplitTime: row.lastSplitTime,
@@ -215,7 +218,10 @@ interface SocketStore {
   disconnect: () => void
   reconnect: () => void
 
-  joinGame: (playerName: string) => void
+  joinGame: (
+    playerName: string,
+    options?: { roomId?: string; skinId?: string; color?: string }
+  ) => Promise<void>
   leaveGame: () => void
   startGame: () => void
   sendPlayerInput: (input: PlayerInput) => void
@@ -493,20 +499,31 @@ export const useSocketStore = create<SocketStore>((set, get) => {
       setTimeout(() => get().connect(), Math.min(INITIAL_RECONNECT_DELAY * 2 ** reconnectAttempts, 10_000))
     },
 
-    joinGame: playerName => {
-      const { connection, socketId, activeRoomId } = get()
+    joinGame: async (playerName, options) => {
+      const { connection, socketId } = get()
       if (!connection || !socketId) {
-        emitError('Cannot join game: not connected')
-        return
+        const message = 'Cannot join game: not connected'
+        emitError(message)
+        throw new Error(message)
       }
 
-      set({ activeRoomId })
-      void connection.reducers
-        .joinGame({ roomId: activeRoomId, playerName })
+      const roomId = options?.roomId ?? get().activeRoomId
+      set({ activeRoomId: roomId })
+      return connection.reducers
+        .joinGame({
+          roomId,
+          playerName,
+          skinId: options?.skinId,
+          color: options?.color,
+        })
         .then(() => {
           useGameStore.getState().setLocalPlayerId(socketId)
         })
-        .catch(error => emitError(error.message || 'Failed to join game'))
+        .catch(error => {
+          const message = error.message || 'Failed to join game'
+          emitError(message)
+          throw error instanceof Error ? error : new Error(message)
+        })
     },
 
     leaveGame: () => {
@@ -548,7 +565,7 @@ export const useSocketStore = create<SocketStore>((set, get) => {
 
     sendMessage: message => {
       if (message.type === 'join_game') {
-        get().joinGame(message.data.playerName)
+        void get().joinGame(message.data.playerName)
         return
       }
       if (message.type === 'start_game') {

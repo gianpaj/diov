@@ -10,6 +10,7 @@ export type {
   Vector2D,
   Boundary,
   InputVector,
+  RoomMode,
   RoomStatusValue,
   RoomState,
   PlayerState,

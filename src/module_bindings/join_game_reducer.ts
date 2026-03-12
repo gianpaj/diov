@@ -13,4 +13,6 @@ import {
 export default {
   roomId: __t.option(__t.string()),
   playerName: __t.string(),
+  skinId: __t.option(__t.string()),
+  color: __t.option(__t.string()),
 };

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Coins,
   Info,
@@ -502,8 +503,8 @@ const HomePage: React.FC = () => {
   }
 
   return (
-    <div className='min-h-screen bg-[radial-gradient(circle_at_top,#203050_0%,#12192b_40%,#090d18_100%)] text-white'>
-      <div className='mx-auto flex w-full max-w-[1480px] flex-col gap-6 px-4 py-6 lg:flex-row lg:items-start'>
+    <div className='h-dvh overflow-hidden bg-[radial-gradient(circle_at_top,#203050_0%,#12192b_40%,#090d18_100%)] text-white'>
+      <div className='mx-auto flex h-full w-full max-w-[1480px] flex-col gap-6 overflow-y-auto px-4 py-4 lg:flex-row lg:items-start'>
         <section className='w-full lg:max-w-[520px]'>
           <div className='animate-[fadeIn_0.5s_ease-out] rounded-card border border-white/10 bg-black/70 p-8 backdrop-blur-[18px]'>
             {joinError && (
@@ -679,257 +680,333 @@ const HomePage: React.FC = () => {
         </section>
 
         <section className='grid flex-1 gap-6'>
-          <div className='grid gap-6 xl:grid-cols-[1.05fr_0.95fr]'>
-            <div className='rounded-card border border-white/10 bg-black/60 p-6 backdrop-blur-[18px]'>
-              <div className='mb-4 flex items-center justify-between gap-4'>
-                <div>
-                  <h2 className='text-[1.3rem] font-semibold text-white'>Coins & Progression</h2>
-                  <p className='mt-1 text-sm text-white/70'>
-                    Anonymous users can browse the economy. Registered Telegram users unlock
-                    balances, claims, purchases, and persistent cosmetics.
-                  </p>
-                </div>
-                <button
-                  className='btn btn-secondary'
-                  type='button'
-                  onClick={handleClaimDailyReward}
-                >
-                  <Coins size={16} />
-                  Daily Claim
-                </button>
-              </div>
+          <Tabs defaultValue='overview' className='grid gap-6'>
+            <TabsList className='inline-flex w-full flex-wrap gap-2 rounded-card border border-white/10 bg-black/45 p-2 backdrop-blur-[18px]'>
+              <TabsTrigger value='overview'>Overview</TabsTrigger>
+              <TabsTrigger value='economy'>Economy</TabsTrigger>
+              <TabsTrigger value='shop'>Shop</TabsTrigger>
+              <TabsTrigger value='customizer'>Customizer</TabsTrigger>
+            </TabsList>
 
-              <div className='grid gap-4 md:grid-cols-3'>
-                <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
-                  <div className='text-xs uppercase tracking-[0.16em] text-white/45'>Balance</div>
-                  <div className='mt-3 text-3xl font-semibold text-white'>{tokenBalance}</div>
-                  <div className='mt-2 text-sm text-white/60'>
-                    Single coin balance for earned and future purchased value.
+            <TabsContent value='overview' className='grid gap-6'>
+              <div className='grid gap-6 xl:grid-cols-[1.05fr_0.95fr]'>
+                <div className='rounded-card border border-white/10 bg-black/60 p-6 backdrop-blur-[18px]'>
+                  <div className='mb-4 flex items-center justify-between gap-4'>
+                    <div>
+                      <h2 className='text-[1.3rem] font-semibold text-white'>Lobby Overview</h2>
+                      <p className='mt-1 text-sm text-white/70'>
+                        Queue access, economy readiness, and match setup are grouped here for quick
+                        review before you join.
+                      </p>
+                    </div>
+                    <div className='rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/80'>
+                      {selectedQueueConfig.title}
+                    </div>
                   </div>
+
+                  <div className='grid gap-4 md:grid-cols-3'>
+                    <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
+                      <div className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                        Queue Room
+                      </div>
+                      <div className='mt-3 text-lg font-semibold text-white'>{selectedRoomId}</div>
+                      <div className='mt-2 text-sm text-white/60'>
+                        Active queue destination used by `join_game`.
+                      </div>
+                    </div>
+                    <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
+                      <div className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                        Account Access
+                      </div>
+                      <div className='mt-3 text-lg font-semibold text-white'>
+                        {viewer?.isRegistered ? 'Registered' : 'Guest'}
+                      </div>
+                      <div className='mt-2 text-sm text-white/60'>
+                        {selectedQueueConfig.requiresRegistered && !viewer?.isRegistered
+                          ? signInRequiredMessage
+                          : 'Current account can access the selected queue.'}
+                      </div>
+                    </div>
+                    <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
+                      <div className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                        Active Look
+                      </div>
+                      <div className='mt-3 text-lg font-semibold text-white'>
+                        {loadout.applied.skinId ?? 'guest-default'}
+                      </div>
+                      <div className='mt-2 text-sm text-white/60'>{loadout.applied.color}</div>
+                    </div>
+                  </div>
+
+                  {commerceMessage && (
+                    <div className='mt-4 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white/80'>
+                      {commerceMessage}
+                    </div>
+                  )}
                 </div>
-                <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
-                  <div className='text-xs uppercase tracking-[0.16em] text-white/45'>
-                    Applied Skin
+
+                <div className='rounded-card border border-white/10 bg-black/60 p-6 backdrop-blur-[18px]'>
+                  <div className='mb-4 flex items-center gap-2 text-[1.2rem] font-semibold text-white'>
+                    <Info size={18} />
+                    Match Rules
                   </div>
-                  <div className='mt-3 text-lg font-semibold text-white'>
-                    {loadout.applied.skinId ?? 'guest-default'}
-                  </div>
-                  <div className='mt-2 text-sm text-white/60'>
-                    Carried into registered lobbies and matches via `join_game` appearance fields.
-                  </div>
-                </div>
-                <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
-                  <div className='text-xs uppercase tracking-[0.16em] text-white/45'>
-                    Wallet Rail
-                  </div>
-                  <div className='mt-3 text-lg font-semibold text-white'>Telegram TON</div>
-                  <div className='mt-2 text-sm text-white/60'>
-                    Primary checkout path for future paid purchases and token packs.
-                  </div>
+                  <ul className='space-y-3 text-sm leading-6 text-white/75'>
+                    <li>
+                      Guest queue is open to anonymous users and does not write persistent economy
+                      state.
+                    </li>
+                    <li>
+                      Competitive and casual-powerups queues are reserved for registered accounts.
+                    </li>
+                    <li>
+                      Cosmetics ship first. Future spit-ammo entitlements stay out of competitive
+                      mode.
+                    </li>
+                    <li>
+                      Backend keeps wallet, ledger, catalog, inventory, and loadouts; SpacetimeDB
+                      only receives match-ready appearance data.
+                    </li>
+                  </ul>
                 </div>
               </div>
+            </TabsContent>
 
-              {commerceMessage && (
-                <div className='mt-4 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white/80'>
-                  {commerceMessage}
+            <TabsContent value='economy' className='grid gap-6'>
+              <div className='rounded-card border border-white/10 bg-black/60 p-6 backdrop-blur-[18px]'>
+                <div className='mb-4 flex items-center justify-between gap-4'>
+                  <div>
+                    <h2 className='text-[1.3rem] font-semibold text-white'>Coins & Progression</h2>
+                    <p className='mt-1 text-sm text-white/70'>
+                      Anonymous users can browse the economy. Registered Telegram users unlock
+                      balances, claims, purchases, and persistent cosmetics.
+                    </p>
+                  </div>
+                  <button
+                    className='btn btn-secondary'
+                    type='button'
+                    onClick={handleClaimDailyReward}
+                  >
+                    <Coins size={16} />
+                    Daily Claim
+                  </button>
                 </div>
-              )}
-            </div>
 
-            <div className='rounded-card border border-white/10 bg-black/60 p-6 backdrop-blur-[18px]'>
-              <div className='mb-4 flex items-center gap-2 text-[1.2rem] font-semibold text-white'>
-                <Info size={18} />
-                Match Rules
-              </div>
-              <ul className='space-y-3 text-sm leading-6 text-white/75'>
-                <li>
-                  Guest queue is open to anonymous users and does not write persistent economy
-                  state.
-                </li>
-                <li>
-                  Competitive and casual-powerups queues are reserved for registered accounts.
-                </li>
-                <li>
-                  Cosmetics ship first. Future spit-ammo entitlements stay out of competitive mode.
-                </li>
-                <li>
-                  Backend keeps wallet, ledger, catalog, inventory, and loadouts; SpacetimeDB only
-                  receives match-ready appearance data.
-                </li>
-              </ul>
-            </div>
-          </div>
+                <div className='grid gap-4 md:grid-cols-3'>
+                  <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
+                    <div className='text-xs uppercase tracking-[0.16em] text-white/45'>Balance</div>
+                    <div className='mt-3 text-3xl font-semibold text-white'>{tokenBalance}</div>
+                    <div className='mt-2 text-sm text-white/60'>
+                      Single coin balance for earned and future purchased value.
+                    </div>
+                  </div>
+                  <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
+                    <div className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                      Applied Skin
+                    </div>
+                    <div className='mt-3 text-lg font-semibold text-white'>
+                      {loadout.applied.skinId ?? 'guest-default'}
+                    </div>
+                    <div className='mt-2 text-sm text-white/60'>
+                      Carried into registered lobbies and matches via `join_game` appearance fields.
+                    </div>
+                  </div>
+                  <div className='rounded-2xl border border-white/10 bg-white/5 p-4'>
+                    <div className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                      Wallet Rail
+                    </div>
+                    <div className='mt-3 text-lg font-semibold text-white'>Telegram TON</div>
+                    <div className='mt-2 text-sm text-white/60'>
+                      Primary checkout path for future paid purchases and token packs.
+                    </div>
+                  </div>
+                </div>
 
-          <div className='grid gap-6 xl:grid-cols-[1.05fr_0.95fr]'>
-            <div className='rounded-card border border-white/10 bg-black/60 p-6 backdrop-blur-[18px]'>
-              <div className='mb-5 flex items-center gap-2 text-[1.3rem] font-semibold text-white'>
-                <ShoppingBag size={18} />
-                Shop Browser
+                {commerceMessage && (
+                  <div className='mt-4 rounded-2xl border border-white/10 bg-white/6 px-4 py-3 text-sm text-white/80'>
+                    {commerceMessage}
+                  </div>
+                )}
               </div>
-              <div className='grid gap-3'>
-                {catalog.map(item => (
-                  <div key={item.id} className='rounded-2xl border border-white/10 bg-white/5 p-4'>
-                    <div className='flex flex-wrap items-start justify-between gap-4'>
-                      <div className='flex items-start gap-4'>
-                        <div
-                          className='flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 text-xs font-semibold uppercase tracking-[0.12em] text-white/80'
-                          style={{
-                            background:
-                              item.previewColor ??
-                              'linear-gradient(135deg, rgba(78,205,196,0.25), rgba(255,107,107,0.25))',
-                          }}
-                        >
-                          {item.category === 'SKIN' ? 'Skin' : 'Color'}
+            </TabsContent>
+
+            <TabsContent value='shop' className='grid gap-6'>
+              <div className='rounded-card border border-white/10 bg-black/60 p-6 backdrop-blur-[18px]'>
+                <div className='mb-5 flex items-center gap-2 text-[1.3rem] font-semibold text-white'>
+                  <ShoppingBag size={18} />
+                  Shop Browser
+                </div>
+                <div className='grid gap-3'>
+                  {catalog.map(item => (
+                    <div
+                      key={item.id}
+                      className='rounded-2xl border border-white/10 bg-white/5 p-4'
+                    >
+                      <div className='flex flex-wrap items-start justify-between gap-4'>
+                        <div className='flex items-start gap-4'>
+                          <div
+                            className='flex h-14 w-14 items-center justify-center rounded-2xl border border-white/15 text-xs font-semibold uppercase tracking-[0.12em] text-white/80'
+                            style={{
+                              background:
+                                item.previewColor ??
+                                'linear-gradient(135deg, rgba(78,205,196,0.25), rgba(255,107,107,0.25))',
+                            }}
+                          >
+                            {item.category === 'SKIN' ? 'Skin' : 'Color'}
+                          </div>
+                          <div>
+                            <div className='flex items-center gap-2'>
+                              <div className='text-base font-semibold text-white'>{item.name}</div>
+                              <span className='rounded-full border border-white/15 px-2 py-0.5 text-[0.7rem] uppercase tracking-[0.16em] text-white/55'>
+                                {item.rarity}
+                              </span>
+                            </div>
+                            <div className='mt-1 text-sm text-white/70'>{item.description}</div>
+                            <div className='mt-2 text-xs uppercase tracking-[0.16em] text-white/45'>
+                              {item.price.coins !== null ? `${item.price.coins} coins` : 'TON only'}
+                              {item.price.ton.amountNano
+                                ? ` • ${item.price.ton.amountNano} nanoTON`
+                                : ''}
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <div className='flex items-center gap-2'>
-                            <div className='text-base font-semibold text-white'>{item.name}</div>
-                            <span className='rounded-full border border-white/15 px-2 py-0.5 text-[0.7rem] uppercase tracking-[0.16em] text-white/55'>
-                              {item.rarity}
+
+                        <div className='flex flex-wrap items-center gap-2'>
+                          {item.ownership.equipped ? (
+                            <span className='rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-cyan-100'>
+                              Equipped
                             </span>
-                          </div>
-                          <div className='mt-1 text-sm text-white/70'>{item.description}</div>
-                          <div className='mt-2 text-xs uppercase tracking-[0.16em] text-white/45'>
-                            {item.price.coins !== null ? `${item.price.coins} coins` : 'TON only'}
-                            {item.price.ton.amountNano
-                              ? ` • ${item.price.ton.amountNano} nanoTON`
-                              : ''}
-                          </div>
+                          ) : item.ownership.owned ? (
+                            <button
+                              type='button'
+                              className='btn btn-secondary'
+                              onClick={() =>
+                                item.category === 'SKIN'
+                                  ? handleEquipSkin(item.id)
+                                  : handleEquipColor(item.id)
+                              }
+                            >
+                              <Sparkles size={16} />
+                              Equip
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type='button'
+                                className='btn btn-secondary'
+                                onClick={() => handleBuyItem(item, 'COINS')}
+                              >
+                                <Coins size={16} />
+                                Buy
+                              </button>
+                              <button
+                                type='button'
+                                className='btn btn-secondary'
+                                onClick={() => handleBuyItem(item, 'TELEGRAM_TON')}
+                              >
+                                <Wallet size={16} />
+                                TON
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
 
-                      <div className='flex flex-wrap items-center gap-2'>
-                        {item.ownership.equipped ? (
-                          <span className='rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-cyan-100'>
-                            Equipped
-                          </span>
-                        ) : item.ownership.owned ? (
-                          <button
-                            type='button'
-                            className='btn btn-secondary'
-                            onClick={() =>
-                              item.category === 'SKIN'
-                                ? handleEquipSkin(item.id)
-                                : handleEquipColor(item.id)
-                            }
-                          >
-                            <Sparkles size={16} />
-                            Equip
-                          </button>
-                        ) : (
-                          <>
+            <TabsContent value='customizer' className='grid gap-6'>
+              <div className='rounded-card border border-white/10 bg-black/60 p-6 backdrop-blur-[18px]'>
+                <div className='mb-5 flex items-center gap-2 text-[1.3rem] font-semibold text-white'>
+                  <Palette size={18} />
+                  Customizer
+                </div>
+
+                <div className='rounded-2xl border border-white/10 bg-white/5 p-5'>
+                  <div className='mb-4 flex items-center gap-4'>
+                    <div
+                      className='h-[72px] w-[72px] rounded-full border-[3px] border-white/25'
+                      style={{ backgroundColor: loadout.applied.color }}
+                    />
+                    <div>
+                      <div className='text-lg font-semibold text-white'>
+                        {loadout.applied.skinId ?? 'guest-default'}
+                      </div>
+                      <div className='text-sm text-white/65'>{loadout.applied.color}</div>
+                    </div>
+                  </div>
+
+                  <div className='space-y-5'>
+                    <div>
+                      <div className='mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-white/55'>
+                        <Sparkles size={14} />
+                        Owned Skins
+                      </div>
+                      <div className='grid gap-2'>
+                        {(viewer?.isRegistered ? loadout.skins : shopSkins.slice(0, 2)).map(
+                          item => (
                             <button
+                              key={item.id}
                               type='button'
-                              className='btn btn-secondary'
-                              onClick={() => handleBuyItem(item, 'COINS')}
+                              className='flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/8'
+                              onClick={() => handleEquipSkin(item.id)}
                             >
-                              <Coins size={16} />
-                              Buy
+                              <span className='text-sm text-white'>{item.name}</span>
+                              <span className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                                {loadout.equippedSkinId === item.id ? 'Active' : 'Equip'}
+                              </span>
                             </button>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className='mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-white/55'>
+                        <Palette size={14} />
+                        Owned Colors
+                      </div>
+                      <div className='grid gap-2'>
+                        {(viewer?.isRegistered ? loadout.colors : shopColors.slice(0, 2)).map(
+                          item => (
                             <button
+                              key={item.id}
                               type='button'
-                              className='btn btn-secondary'
-                              onClick={() => handleBuyItem(item, 'TELEGRAM_TON')}
+                              className='flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/8'
+                              onClick={() => handleEquipColor(item.id)}
                             >
-                              <Wallet size={16} />
-                              TON
+                              <span className='flex items-center gap-3 text-sm text-white'>
+                                <span
+                                  className='h-4 w-4 rounded-full border border-white/30'
+                                  style={{ backgroundColor: item.previewColor ?? '#2E90FF' }}
+                                />
+                                {item.name}
+                              </span>
+                              <span className='text-xs uppercase tracking-[0.16em] text-white/45'>
+                                {loadout.equippedColorId === item.id ? 'Active' : 'Equip'}
+                              </span>
                             </button>
-                          </>
+                          )
                         )}
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className='rounded-card border border-white/10 bg-black/60 p-6 backdrop-blur-[18px]'>
-              <div className='mb-5 flex items-center gap-2 text-[1.3rem] font-semibold text-white'>
-                <Palette size={18} />
-                Customizer
-              </div>
-
-              <div className='rounded-2xl border border-white/10 bg-white/5 p-5'>
-                <div className='mb-4 flex items-center gap-4'>
-                  <div
-                    className='h-[72px] w-[72px] rounded-full border-[3px] border-white/25'
-                    style={{ backgroundColor: loadout.applied.color }}
-                  />
-                  <div>
-                    <div className='text-lg font-semibold text-white'>
-                      {loadout.applied.skinId ?? 'guest-default'}
-                    </div>
-                    <div className='text-sm text-white/65'>{loadout.applied.color}</div>
-                  </div>
                 </div>
 
-                <div className='space-y-5'>
-                  <div>
-                    <div className='mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-white/55'>
-                      <Sparkles size={14} />
-                      Owned Skins
-                    </div>
-                    <div className='grid gap-2'>
-                      {(viewer?.isRegistered ? loadout.skins : shopSkins.slice(0, 2)).map(item => (
-                        <button
-                          key={item.id}
-                          type='button'
-                          className='flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/8'
-                          onClick={() => handleEquipSkin(item.id)}
-                        >
-                          <span className='text-sm text-white'>{item.name}</span>
-                          <span className='text-xs uppercase tracking-[0.16em] text-white/45'>
-                            {loadout.equippedSkinId === item.id ? 'Active' : 'Equip'}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
+                <div className='mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70'>
+                  <div className='flex items-center gap-2 font-semibold text-white'>
+                    <Users size={16} />
+                    Registration Gate
                   </div>
-
-                  <div>
-                    <div className='mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-white/55'>
-                      <Palette size={14} />
-                      Owned Colors
-                    </div>
-                    <div className='grid gap-2'>
-                      {(viewer?.isRegistered ? loadout.colors : shopColors.slice(0, 2)).map(
-                        item => (
-                          <button
-                            key={item.id}
-                            type='button'
-                            className='flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/8'
-                            onClick={() => handleEquipColor(item.id)}
-                          >
-                            <span className='flex items-center gap-3 text-sm text-white'>
-                              <span
-                                className='h-4 w-4 rounded-full border border-white/30'
-                                style={{ backgroundColor: item.previewColor ?? '#2E90FF' }}
-                              />
-                              {item.name}
-                            </span>
-                            <span className='text-xs uppercase tracking-[0.16em] text-white/45'>
-                              {loadout.equippedColorId === item.id ? 'Active' : 'Equip'}
-                            </span>
-                          </button>
-                        )
-                      )}
-                    </div>
-                  </div>
+                  <p className='mt-2 leading-6'>
+                    Anonymous users can browse the catalog and play the guest queue. Registered
+                    games and persistent cosmetics are reserved for Telegram-linked sessions.
+                  </p>
                 </div>
               </div>
-
-              <div className='mt-4 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/70'>
-                <div className='flex items-center gap-2 font-semibold text-white'>
-                  <Users size={16} />
-                  Registration Gate
-                </div>
-                <p className='mt-2 leading-6'>
-                  Anonymous users can browse the catalog and play the guest queue. Registered games
-                  and persistent cosmetics are reserved for Telegram-linked sessions.
-                </p>
-              </div>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </section>
       </div>
 

@@ -10,6 +10,9 @@ if (!baseURL) {
 }
 export const authClient = createAuthClient({
   baseURL,
+  fetchOptions: {
+    credentials: 'include',
+  },
   plugins: [anonymousClient(), telegramClient()],
 })
 

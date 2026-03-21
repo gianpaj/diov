@@ -33,7 +33,7 @@ SpacetimeDB module
 
 Backend service
   ├─ Better Auth sessions
-  ├─ Telegram Login Widget + Mini App auth
+  ├─ Telegram OIDC + Mini App auth
   ├─ wallet / ledger / catalog / inventory / loadout APIs
   └─ future TON checkout, webhooks, and entitlements
 ```
@@ -63,7 +63,7 @@ The frontend remembers the last queue separately for anonymous and registered us
 - Coins are backend-owned, not stored in SpacetimeDB
 - Inventory and equipped loadouts live in the backend
 - SpacetimeDB only receives match-scoped cosmetic appearance data such as `skinId` and `color`
-- Telegram Login Widget is the standalone browser sign-in path
+- Telegram OIDC is the standalone browser sign-in path
 - Telegram Mini App sign-in remains supported when the app runs inside Telegram
 - TON is the primary planned paid checkout rail; current backend purchase flow records pending TON purchase references rather than completing live blockchain checkout
 
@@ -122,6 +122,8 @@ BETTER_AUTH_SECRET=replace-with-a-real-secret
 TURSO_DATABASE_URL=file:local.db
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 TELEGRAM_BOT_USERNAME=your_bot_username
+TELEGRAM_OIDC_CLIENT_ID=123123123
+TELEGRAM_OIDC_CLIENT_SECRET=your-telegram-oidc-client-secret
 ```
 
 ### 7. Start the backend
@@ -136,9 +138,9 @@ pnpm --filter backend dev
 pnpm --filter frontend dev
 ```
 
-## Telegram Login Widget in Local Dev
+## Telegram OIDC in Local Dev
 
-Telegram Login Widget does not work reliably on `localhost` or `127.0.0.1`. For standalone browser sign-in, use HTTPS tunnels.
+Telegram OIDC does not work on plain `localhost` or `127.0.0.1`. For standalone browser sign-in, use HTTPS tunnels and register the OIDC origin + callback in the BotFather mini app.
 
 Example with `ngrok`:
 
@@ -162,7 +164,13 @@ CORS_ORIGIN=https://<frontend>.ngrok-free.app
 BETTER_AUTH_URL=https://<backend>.ngrok-free.app
 ```
 
-In BotFather, set the bot domain to the frontend hostname. Open the app via the frontend HTTPS tunnel, not localhost.
+In the BotFather mini app under `Bot Settings -> Web Login`:
+- add the frontend HTTPS origin as the allowed URL
+- add `https://<backend>.ngrok-free.app/api/auth/callback/telegram-oidc` as the redirect URL
+- copy the generated OIDC client ID and client secret into `apps/backend/.env`
+- do not use the legacy chat-menu `Domain` setting for OIDC
+
+Open the app via the frontend HTTPS tunnel, not localhost.
 
 ## Useful Scripts
 
@@ -187,7 +195,7 @@ Working:
 - Homepage shop/customizer flow and cosmetic-aware joins
 
 Still in progress:
-- Telegram Login Widget and Telegram Mini App auth support
+- Telegram OIDC and Telegram Mini App auth support
 - broader automated testing
 - more frontend performance work
 - further removal of compatibility `gameState` paths

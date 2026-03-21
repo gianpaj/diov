@@ -80,16 +80,6 @@ const storageKeyForViewer = (viewer: ViewerSummary | null) =>
 const isQueueAllowed = (viewer: ViewerSummary | null, queue: QueueMode) =>
   queue === 'guest' || Boolean(viewer?.isRegistered)
 
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp?: {
-        initData?: string
-      }
-    }
-  }
-}
-
 const HomePage: React.FC = () => {
   const [playerName, setPlayerName] = useState('')
   const [isJoining, setIsJoining] = useState(false)
@@ -101,7 +91,6 @@ const HomePage: React.FC = () => {
   const [joinError, setJoinError] = useState<string | null>(null)
   const [commerceMessage, setCommerceMessage] = useState<string | null>(null)
   const [isRefreshingEconomy, setIsRefreshingEconomy] = useState(true)
-  const [isTelegramWidgetLoading, setIsTelegramWidgetLoading] = useState(false)
   const navigate = useNavigate()
 
   const { connect, joinGame, isConnected, connectionStatus } = useSocketStore()
@@ -112,7 +101,6 @@ const HomePage: React.FC = () => {
     reject: (reason: string) => void
   } | null>(null)
   const connectionStatusRef = useRef(connectionStatus)
-  const telegramWidgetInitializedRef = useRef(false)
 
   useEffect(() => {
     connectionStatusRef.current = connectionStatus
@@ -228,122 +216,6 @@ const HomePage: React.FC = () => {
 
   const signInRequiredMessage =
     'Registered queues, purchases, and custom loadouts require a Telegram-linked account.'
-  const isMiniAppContext = Boolean(window.Telegram?.WebApp?.initData)
-
-  const handleTelegramSignIn = async () => {
-    const initData = window.Telegram?.WebApp?.initData
-    if (!initData) {
-      setCommerceMessage(
-        'Use the Telegram Login Widget below when signing in from a normal browser.'
-      )
-      return
-    }
-
-    try {
-      const { authClient } = await import('@/lib/auth-client')
-      const telegramClient = authClient as unknown as {
-        signInWithMiniApp?: (
-          value: string
-        ) => Promise<{ data: unknown; error: null } | { data: null; error: { message?: string } }>
-      }
-
-      if (!telegramClient.signInWithMiniApp) {
-        setCommerceMessage('Telegram sign-in is not configured on the client yet.')
-        return
-      }
-
-      const result = await telegramClient.signInWithMiniApp(initData)
-      if (result.error) {
-        setCommerceMessage(result.error.message ?? 'Telegram sign-in failed.')
-        return
-      }
-
-      setCommerceMessage('Telegram account linked. Refreshing queue and wallet access…')
-      await refreshEconomy()
-    } catch (error) {
-      setCommerceMessage(error instanceof Error ? error.message : 'Telegram sign-in failed.')
-    }
-  }
-
-  useEffect(() => {
-    if (viewer?.isRegistered || isMiniAppContext || telegramWidgetInitializedRef.current) {
-      return
-    }
-
-    let cancelled = false
-    const widgetContainer = document.getElementById('telegram-login-container')
-    if (!widgetContainer) {
-      return
-    }
-
-    widgetContainer.innerHTML = ''
-    setIsTelegramWidgetLoading(true)
-
-    const initWidget = async () => {
-      try {
-        const { authClient } = await import('@/lib/auth-client')
-        const telegramClient = authClient as unknown as {
-          initTelegramWidget?: (
-            containerId: string,
-            options: {
-              size?: 'large' | 'medium' | 'small'
-              cornerRadius?: number
-              showUserPhoto?: boolean
-            },
-            onAuth: (authData: unknown) => Promise<void>
-          ) => Promise<void>
-          signInWithTelegram?: (
-            authData: unknown
-          ) => Promise<{ data: unknown; error: null } | { data: null; error: { message?: string } }>
-        }
-
-        if (!telegramClient.initTelegramWidget || !telegramClient.signInWithTelegram) {
-          throw new Error('Telegram Login Widget is not available in the current auth client.')
-        }
-
-        await telegramClient.initTelegramWidget(
-          'telegram-login-container',
-          { size: 'large', cornerRadius: 12, showUserPhoto: true },
-          async authData => {
-            const result = await telegramClient.signInWithTelegram!(authData)
-            if (result.error) {
-              setCommerceMessage(result.error.message ?? 'Telegram sign-in failed.')
-              return
-            }
-
-            setCommerceMessage('Telegram account linked. Refreshing queue and wallet access…')
-            await refreshEconomy()
-          }
-        )
-
-        if (!cancelled) {
-          telegramWidgetInitializedRef.current = true
-          setCommerceMessage(
-            'Use the Telegram Login Widget below to unlock registered queues and wallet features.'
-          )
-        }
-      } catch (error) {
-        console.log(error)
-
-        if (!cancelled) {
-          setCommerceMessage(
-            error instanceof Error ? error.message : 'Failed to initialize Telegram Login Widget.'
-          )
-        }
-      } finally {
-        if (!cancelled) {
-          setIsTelegramWidgetLoading(false)
-        }
-      }
-    }
-
-    void initWidget()
-
-    return () => {
-      cancelled = true
-    }
-  }, [viewer?.isRegistered, isMiniAppContext])
-
   const handleJoinGame = async () => {
     if (!playerName.trim()) {
       setJoinError('Please enter your name.')
@@ -537,12 +409,6 @@ const HomePage: React.FC = () => {
               <div className='rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/80'>
                 {viewer?.isRegistered ? 'Registered account' : 'Anonymous browser / guest'}
               </div>
-              {!viewer?.isRegistered && isMiniAppContext && (
-                <button className='btn btn-secondary' type='button' onClick={handleTelegramSignIn}>
-                  <Wallet size={16} />
-                  Link Telegram Mini App
-                </button>
-              )}
             </div>
 
             <div className='mb-6 rounded-2xl border border-cyan-400/20 bg-cyan-400/8 p-4'>
@@ -556,25 +422,6 @@ const HomePage: React.FC = () => {
                 reconciliation.
               </p>
             </div>
-
-            {!viewer?.isRegistered && !isMiniAppContext && (
-              <div className='mb-6 rounded-2xl border border-white/10 bg-white/5 p-4'>
-                <div className='mb-3 flex items-center gap-2 text-[0.95rem] font-semibold text-white'>
-                  <Wallet size={18} />
-                  Sign In With Telegram
-                </div>
-                <p className='mb-4 text-sm leading-6 text-white/75'>
-                  This browser flow uses Telegram Login Widget rather than the Mini App auth path.
-                </p>
-                {isTelegramWidgetLoading && (
-                  <div className='mb-3 text-sm text-white/60'>Loading Telegram widget…</div>
-                )}
-                <div
-                  id='telegram-login-container'
-                  className='flex min-h-[56px] items-center justify-center rounded-xl border border-dashed border-white/15 bg-black/20 px-3 py-4'
-                />
-              </div>
-            )}
 
             <div className='mb-6'>
               <label className='mb-2 block text-sm font-semibold uppercase tracking-[0.16em] text-white/60'>

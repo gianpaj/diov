@@ -47,6 +47,12 @@ const EnvSchema = z.object({
   // ── Telegram ───────────────────────────────────────────────────────────────
   TELEGRAM_BOT_TOKEN: z.string().min(1, 'TELEGRAM_BOT_TOKEN is required'),
   TELEGRAM_BOT_USERNAME: z.string().min(1, 'TELEGRAM_BOT_USERNAME is required (without @)'),
+  TELEGRAM_OIDC_CLIENT_ID: z.string().optional().default(''),
+  TELEGRAM_OIDC_CLIENT_SECRET: z
+    .string()
+    .optional()
+    .default('')
+    .refine(value => value.length > 0, 'TELEGRAM_OIDC_CLIENT_SECRET is required for Telegram OIDC'),
 })
 
 const env = EnvSchema.parse(process.env)
@@ -63,4 +69,6 @@ export const config = {
   DISCORD_CLIENT_SECRET: env.DISCORD_CLIENT_SECRET,
   TELEGRAM_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN,
   TELEGRAM_BOT_USERNAME: env.TELEGRAM_BOT_USERNAME,
+  TELEGRAM_OIDC_CLIENT_ID: env.TELEGRAM_OIDC_CLIENT_ID,
+  TELEGRAM_OIDC_CLIENT_SECRET: env.TELEGRAM_OIDC_CLIENT_SECRET,
 }

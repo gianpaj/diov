@@ -13,6 +13,8 @@ process.env.DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID ?? 'discord-client
 process.env.DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET ?? 'discord-client-secret'
 process.env.TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? 'telegram-bot-token'
 process.env.TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME ?? 'battlecirclesbot'
+process.env.TELEGRAM_OIDC_CLIENT_SECRET =
+  process.env.TELEGRAM_OIDC_CLIENT_SECRET ?? 'telegram-oidc-client-secret'
 
 const client = createClient({ url: 'file::memory:' })
 

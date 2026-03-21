@@ -72,7 +72,7 @@ diov/
 
 [Backend]
   ├─ Better Auth sessions
-  ├─ Telegram Login Widget + Mini App auth
+  ├─ Telegram OIDC + Mini App auth
   ├─ wallet / ledger
   ├─ catalog / inventory / loadouts
   └─ future TON checkout and webhooks
@@ -172,11 +172,13 @@ BETTER_AUTH_SECRET=...
 TURSO_DATABASE_URL=file:local.db
 TELEGRAM_BOT_TOKEN=...
 TELEGRAM_BOT_USERNAME=your_bot_username
+TELEGRAM_OIDC_CLIENT_ID=123123123
+TELEGRAM_OIDC_CLIENT_SECRET=your-telegram-oidc-client-secret
 ```
 
 These belong in `apps/backend/.env`.
 
-### Telegram Login Widget local dev
+### Telegram OIDC local dev
 
 For standalone browser Telegram login, use HTTPS tunnels such as `ngrok` for both frontend and backend.
 
@@ -191,7 +193,11 @@ Then:
 - set `VITE_BETTER_AUTH_URL` to the backend HTTPS tunnel
 - set backend `CORS_ORIGIN` to the frontend HTTPS tunnel
 - set backend `BETTER_AUTH_URL` to the backend HTTPS tunnel
-- set the Telegram bot domain in BotFather to the frontend hostname
+- open the BotFather mini app, then go to `Bot Settings -> Web Login`
+- register the frontend HTTPS origin there as the allowed URL
+- register `https://<backend>.ngrok-free.app/api/auth/callback/telegram-oidc` there as the redirect URL
+- copy `TELEGRAM_OIDC_CLIENT_ID` and `TELEGRAM_OIDC_CLIENT_SECRET` from that Web Login screen into `apps/backend/.env`
+- do not use the legacy BotFather chat menu or the `Domain` setting for OIDC setup
 - open the app via the frontend HTTPS tunnel, not localhost
 
 ## Environment Variables
@@ -222,7 +228,7 @@ Backend:
 - Harden auth/session flows beyond current Telegram and anonymous support.
 - Complete TON checkout, reconciliation, and webhook handling in the backend service.
 - Add tests for SpacetimeDB reducer behavior and frontend subscription flows.
-- Add better local/dev documentation for stable SpacetimeDB identities and Telegram Login Widget setup.
+- Add better local/dev documentation for stable SpacetimeDB identities and Telegram OIDC setup.
 
 
 ## Skills

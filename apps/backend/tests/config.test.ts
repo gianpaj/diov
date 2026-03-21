@@ -10,6 +10,7 @@ const REQUIRED_ENV = {
   DISCORD_CLIENT_SECRET: 'discord-client-secret',
   TELEGRAM_BOT_TOKEN: 'telegram-bot-token',
   TELEGRAM_BOT_USERNAME: 'battle_circles_bot',
+  TELEGRAM_OIDC_CLIENT_SECRET: 'telegram-oidc-client-secret',
 }
 
 const MANAGED_KEYS = [
@@ -24,12 +25,19 @@ const MANAGED_KEYS = [
   'DISCORD_CLIENT_SECRET',
   'TELEGRAM_BOT_TOKEN',
   'TELEGRAM_BOT_USERNAME',
+  'TELEGRAM_OIDC_CLIENT_ID',
+  'TELEGRAM_OIDC_CLIENT_SECRET',
 ] as const
 
 const originalEnv = { ...process.env }
 
 async function importFreshConfig() {
   vi.resetModules()
+  vi.doMock('dotenv', () => ({
+    default: {
+      config: vi.fn(),
+    },
+  }))
   return import('../src/config.ts')
 }
 
@@ -71,6 +79,19 @@ describe('backend config', () => {
         expect.objectContaining({
           path: ['CORS_ORIGIN'],
           message: expect.stringContaining('Wildcard "*" is not allowed.'),
+        }),
+      ],
+    })
+  })
+
+  it('requires a Telegram OIDC client secret', async () => {
+    applyEnv({ TELEGRAM_OIDC_CLIENT_SECRET: undefined })
+
+    await expect(importFreshConfig()).rejects.toMatchObject({
+      issues: [
+        expect.objectContaining({
+          path: ['TELEGRAM_OIDC_CLIENT_SECRET'],
+          message: expect.stringContaining('required for Telegram OIDC'),
         }),
       ],
     })

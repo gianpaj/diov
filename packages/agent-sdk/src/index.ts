@@ -73,6 +73,20 @@ export {
   encodePrivilegedDiagnosticsV1,
 } from './packing/message-pack.ts'
 
+export type {
+  PackedFoodSlotV1,
+  PackedFrameSlotLimits,
+  PackedLeaderboardSlotV1,
+  PackedPlayerSlotV1,
+  PackedPolicyObservationV1,
+  PackedProjectileSlotV1,
+} from './packing/packed-frame.ts'
+
+export {
+  DEFAULT_PACKED_FRAME_SLOT_LIMITS,
+  packPolicyObservationV1,
+} from './packing/packed-frame.ts'
+
 export {
   validateCanonicalActionV1,
   validatePolicyObservationV1,

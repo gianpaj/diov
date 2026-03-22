@@ -65,6 +65,15 @@ export {
 } from './observation.ts'
 
 export {
+  decodeCanonicalActionV1,
+  decodePolicyObservationV1,
+  decodePrivilegedDiagnosticsV1,
+  encodeCanonicalActionV1,
+  encodePolicyObservationV1,
+  encodePrivilegedDiagnosticsV1,
+} from './packing/message-pack.ts'
+
+export {
   validateCanonicalActionV1,
   validatePolicyObservationV1,
   validatePrivilegedDiagnosticsV1,

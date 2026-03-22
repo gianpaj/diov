@@ -6,6 +6,7 @@ import { Container, Graphics } from 'pixi.js'
 extend({ Container, Graphics })
 
 import { Pause, Play, Home } from 'lucide-react'
+import { getViewportBounds, worldToScreen } from '@battle-circles/agent-sdk/visibility'
 import { useSocketStore } from '@/stores/SocketStore'
 import { useGameStore } from '@/stores/GameStore'
 import { useJoystick } from '@/hooks/useJoystick'
@@ -273,8 +274,9 @@ const GamePage: React.FC = () => {
 
     lastInputModeRef.current = 'mouse'
 
-    const playerScreenX = localPlayerRow.position.x - cameraPosition.x + dimensions.width / 2
-    const playerScreenY = localPlayerRow.position.y - cameraPosition.y + dimensions.height / 2
+    const playerScreenPosition = worldToScreen(localPlayerRow.position, cameraPosition, dimensions)
+    const playerScreenX = playerScreenPosition.x
+    const playerScreenY = playerScreenPosition.y
     const deltaX = event.clientX - playerScreenX
     const deltaY = event.clientY - playerScreenY
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
@@ -331,8 +333,9 @@ const GamePage: React.FC = () => {
   }
 
   const renderPlayer = (player: PlayerRowState) => {
-    const screenX = player.position.x - cameraPosition.x + dimensions.width / 2
-    const screenY = player.position.y - cameraPosition.y + dimensions.height / 2
+    const screenPosition = worldToScreen(player.position, cameraPosition, dimensions)
+    const screenX = screenPosition.x
+    const screenY = screenPosition.y
     const visual = getPlayerVisual(player)
     const displaySize = player.size * getPlayerPulseScale(player.id)
     const textureSeed = hashString(`${player.id}:${player.skinId ?? 'classic'}`)
@@ -390,8 +393,9 @@ const GamePage: React.FC = () => {
 
   // Render knibble
   const renderKnibble = (knibble: KnibbleRowState) => {
-    const screenX = knibble.position.x - cameraPosition.x + dimensions.width / 2
-    const screenY = knibble.position.y - cameraPosition.y + dimensions.height / 2
+    const screenPosition = worldToScreen(knibble.position, cameraPosition, dimensions)
+    const screenX = screenPosition.x
+    const screenY = screenPosition.y
     const color = getKnibbleColor(knibble.id)
     const colorNumber = hexToNumber(color)
 
@@ -415,8 +419,9 @@ const GamePage: React.FC = () => {
 
   // Render spit blob
   const renderSpitBlob = (blob: SpitBlobRowState) => {
-    const screenX = blob.position.x - cameraPosition.x + dimensions.width / 2
-    const screenY = blob.position.y - cameraPosition.y + dimensions.height / 2
+    const screenPosition = worldToScreen(blob.position, cameraPosition, dimensions)
+    const screenX = screenPosition.x
+    const screenY = screenPosition.y
 
     return (
       <pixiGraphics
@@ -439,8 +444,9 @@ const GamePage: React.FC = () => {
     if (!roomState) return null
 
     const bounds = roomState.bounds
-    const screenX = bounds.x - cameraPosition.x + dimensions.width / 2
-    const screenY = bounds.y - cameraPosition.y + dimensions.height / 2
+    const screenPosition = worldToScreen({ x: bounds.x, y: bounds.y }, cameraPosition, dimensions)
+    const screenX = screenPosition.x
+    const screenY = screenPosition.y
 
     return (
       <pixiGraphics
@@ -459,16 +465,17 @@ const GamePage: React.FC = () => {
   const renderGrid = () => {
     const gridSize = 50
     const gridLines: import('react').ReactElement[] = []
+    const viewportBounds = getViewportBounds(cameraPosition, dimensions)
 
     // Calculate visible grid lines
-    const startX = Math.floor((cameraPosition.x - dimensions.width / 2) / gridSize) * gridSize
-    const endX = Math.ceil((cameraPosition.x + dimensions.width / 2) / gridSize) * gridSize
-    const startY = Math.floor((cameraPosition.y - dimensions.height / 2) / gridSize) * gridSize
-    const endY = Math.ceil((cameraPosition.y + dimensions.height / 2) / gridSize) * gridSize
+    const startX = Math.floor(viewportBounds.x / gridSize) * gridSize
+    const endX = Math.ceil((viewportBounds.x + viewportBounds.width) / gridSize) * gridSize
+    const startY = Math.floor(viewportBounds.y / gridSize) * gridSize
+    const endY = Math.ceil((viewportBounds.y + viewportBounds.height) / gridSize) * gridSize
 
     // Vertical lines
     for (let x = startX; x <= endX; x += gridSize) {
-      const screenX = x - cameraPosition.x + dimensions.width / 2
+      const screenX = worldToScreen({ x, y: cameraPosition.y }, cameraPosition, dimensions).x
       gridLines.push(
         <pixiGraphics
           key={`v-${x}`}
@@ -486,7 +493,7 @@ const GamePage: React.FC = () => {
 
     // Horizontal lines
     for (let y = startY; y <= endY; y += gridSize) {
-      const screenY = y - cameraPosition.y + dimensions.height / 2
+      const screenY = worldToScreen({ x: cameraPosition.x, y }, cameraPosition, dimensions).y
       gridLines.push(
         <pixiGraphics
           key={`h-${y}`}

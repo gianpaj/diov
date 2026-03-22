@@ -60,6 +60,9 @@ importers:
 
   apps/frontend:
     dependencies:
+      '@battle-circles/agent-sdk':
+        specifier: workspace:*
+        version: link:../../packages/agent-sdk
       '@battle-circles/shared':
         specifier: workspace:*
         version: link:../../packages/shared

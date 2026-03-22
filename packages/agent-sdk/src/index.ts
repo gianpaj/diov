@@ -38,6 +38,15 @@ export {
   visibleProjectileV1Schema,
 } from './schema.ts'
 
+export type { PositionedEntity, ViewportDimensions } from './visibility.ts'
+
+export {
+  filterVisibleEntities,
+  getViewportBounds,
+  isCircleVisibleInBounds,
+  worldToScreen,
+} from './visibility.ts'
+
 export {
   validateCanonicalActionV1,
   validatePolicyObservationV1,

@@ -23,7 +23,11 @@ import {
   type KnibbleState,
   COLORS,
 } from '@/types'
-import { DbConnection, type ErrorContext, type SubscriptionHandle } from '@/module_bindings'
+import {
+  DbConnection,
+  type ErrorContext,
+  type SubscriptionHandle,
+} from '@battle-circles/spacetimedb-bindings'
 
 const DEFAULT_ROOM_ID = 'guest-global'
 const DEFAULT_SPACETIMEDB_HOST = import.meta.env.VITE_SPACETIMEDB_HOST || 'ws://localhost:3000'
@@ -164,24 +168,24 @@ const buildGameStateFromAuthoritative = (
     return acc
   }, {})
 
-  const spitBlobs = Object.values(spitBlobRows).reduce<Record<string, GameState['spitBlobs'][string]>>(
-    (acc, row) => {
-      acc[row.id] = {
-        id: row.id,
-        playerId: row.playerId,
-        position: row.position,
-        velocity: row.velocity,
-        size: row.size,
-        color: row.color,
-        spawnTime: row.createdAt,
-        despawnTime: row.createdAt + 20_000,
-      }
-      return acc
-    },
-    {}
-  )
+  const spitBlobs = Object.values(spitBlobRows).reduce<
+    Record<string, GameState['spitBlobs'][string]>
+  >((acc, row) => {
+    acc[row.id] = {
+      id: row.id,
+      playerId: row.playerId,
+      position: row.position,
+      velocity: row.velocity,
+      size: row.size,
+      color: row.color,
+      spawnTime: row.createdAt,
+      despawnTime: row.createdAt + 20_000,
+    }
+    return acc
+  }, {})
 
-  const startTime = room.status === GameStatus.STARTING ? room.countdownEndsAt ?? 0 : room.startedAt ?? 0
+  const startTime =
+    room.status === GameStatus.STARTING ? (room.countdownEndsAt ?? 0) : (room.startedAt ?? 0)
 
   return {
     id: room.id,
@@ -496,7 +500,10 @@ export const useSocketStore = create<SocketStore>((set, get) => {
 
       set({ connectionStatus: ConnectionStatus.RECONNECTING })
       get().incrementReconnectAttempts()
-      setTimeout(() => get().connect(), Math.min(INITIAL_RECONNECT_DELAY * 2 ** reconnectAttempts, 10_000))
+      setTimeout(
+        () => get().connect(),
+        Math.min(INITIAL_RECONNECT_DELAY * 2 ** reconnectAttempts, 10_000)
+      )
     },
 
     joinGame: async (playerName, options) => {
@@ -554,7 +561,9 @@ export const useSocketStore = create<SocketStore>((set, get) => {
     sendSplit: () => {
       const { connection } = get()
       if (!connection) return
-      void connection.reducers.split({}).catch(error => emitError(error.message || 'Failed to split'))
+      void connection.reducers
+        .split({})
+        .catch(error => emitError(error.message || 'Failed to split'))
     },
 
     sendSpit: () => {
@@ -670,8 +679,7 @@ export const socketSelectors = {
   isConnected: (state: ReturnType<typeof useSocketStore.getState>) => state.isConnected,
   connectionStatus: (state: ReturnType<typeof useSocketStore.getState>) => state.connectionStatus,
   latency: (state: ReturnType<typeof useSocketStore.getState>) => state.latency,
-  reconnectAttempts: (state: ReturnType<typeof useSocketStore.getState>) =>
-    state.reconnectAttempts,
+  reconnectAttempts: (state: ReturnType<typeof useSocketStore.getState>) => state.reconnectAttempts,
 }
 
 export const useIsConnected = () => useSocketStore(socketSelectors.isConnected)

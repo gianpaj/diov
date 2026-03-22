@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "spacetime build --module-path .",
-    "generate": "spacetime generate --lang typescript --out-dir ../../apps/frontend/src/module_bindings --module-path .",
+    "generate": "spacetime generate --lang typescript --out-dir ../../packages/spacetimedb-bindings/src --module-path .",
     "publish:local": "spacetime publish --module-path . --server local",
     "publish": "spacetime publish --module-path . --server maincloud"
   },

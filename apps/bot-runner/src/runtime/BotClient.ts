@@ -4,8 +4,11 @@ import {
   type CanonicalActionV1,
   type PolicyObservationV1,
 } from '@battle-circles/agent-sdk'
-import type { SubscriptionHandle } from '../../../frontend/src/module_bindings/index.ts'
-import { DbConnection, type ErrorContext } from '../../../frontend/src/module_bindings/index.ts'
+import {
+  DbConnection,
+  type ErrorContext,
+  type SubscriptionHandle,
+} from '@battle-circles/spacetimedb-bindings'
 import { config } from '../config.ts'
 import { LobbyFillPolicy } from '../policies/LobbyFillPolicy.ts'
 import { buildSnapshotFromConnection } from './buildSnapshot.ts'

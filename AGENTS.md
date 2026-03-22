@@ -33,7 +33,6 @@ diov/
 │   │   │   │   └── game/
 │   │   │   ├── hooks/
 │   │   │   ├── lib/            ← backend API client + auth client
-│   │   │   ├── module_bindings/← generated SpacetimeDB TS bindings
 │   │   │   ├── stores/
 │   │   │   │   ├── GameStore.tsx
 │   │   │   │   └── SocketStore.tsx
@@ -44,6 +43,7 @@ diov/
 ├── packages/
 │   ├── shared/                 ← canonical schema + codegen
 │   └── spacetimedb/            ← authoritative SpacetimeDB module
+│   └── spacetimedb-bindings/   ← generated SpacetimeDB TS client bindings
 ├── docs/
 ├── package.json
 └── README.md
@@ -115,7 +115,7 @@ These points matter when editing the repo:
 - Gameplay does not go through the Node backend anymore.
 - `SocketStore.tsx` is a SpacetimeDB client store despite the old name.
 - `GameStore.tsx` holds row-level authoritative slices. Prefer those over the compatibility `gameState`.
-- `apps/frontend/src/module_bindings/` is generated. Do not hand-edit it.
+- `packages/spacetimedb-bindings/src/` is generated. Do not hand-edit it.
 - `packages/shared/src/schema.ts` is the canonical wire-format source. Run codegen after changing it.
 - Coins, inventory, loadouts, and payment state live in the backend, not in SpacetimeDB.
 - SpacetimeDB only receives match-scoped appearance data such as `skinId` and `color`.

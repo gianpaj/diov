@@ -42,11 +42,11 @@ Backend service
 
 ```txt
 apps/frontend/          frontend app package
-apps/frontend/src/module_bindings/ generated SpacetimeDB TypeScript bindings
 apps/frontend/src/stores/          GameStore + SocketStore
 apps/backend/           auth, economy, and future payment backend
 packages/shared/        canonical schema + generated frontend/backend types
 packages/spacetimedb/   authoritative game module
+packages/spacetimedb-bindings/ generated SpacetimeDB TypeScript client bindings
 docs/                   plans and research
 ```
 
@@ -207,7 +207,7 @@ Still in progress:
 
 - Edit `packages/shared/src/schema.ts` if the wire format changes
 - Regenerate shared TS types and Spacetime bindings after schema changes
-- Do not hand-edit `apps/frontend/src/module_bindings/`
+- Do not hand-edit `packages/spacetimedb-bindings/src/`
 - Prefer row-level state from `GameStore` over compatibility `gameState`
 - Do not put wallet, inventory, or payment state into SpacetimeDB
 

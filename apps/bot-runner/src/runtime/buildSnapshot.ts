@@ -6,7 +6,7 @@ import type {
   ObservationSourceRoom,
   ObservationSourceSnapshot,
 } from '@battle-circles/agent-sdk/observation'
-import type { DbConnection } from '../../../frontend/src/module_bindings/index.ts'
+import type { DbConnection } from '@battle-circles/spacetimedb-bindings'
 
 const nowMs = () => Date.now()
 

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
+    "replay": "tsx src/replay/runReplay.ts",
     "type-check": "tsc --noEmit",
     "test": "tsx --test tests/**/*.test.ts"
   },

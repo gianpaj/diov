@@ -81,6 +81,16 @@ If `BOT_COUNT > 1`, each bot gets its own suffixed file:
 
 The trace writer flushes on shutdown so `SIGINT` and `SIGTERM` do not drop buffered records.
 
+## Replay Harness
+
+You can replay a trace file against the currently selected policy:
+
+```bash
+pnpm --filter bot-runner replay /path/to/trace.jsonl
+```
+
+The command prints match and mismatch counts, then exits non-zero if the recorded actions drift from the current policy output.
+
 ## Multi-bot Run
 
 Set `BOT_COUNT` above `1` to run several bot clients in one process.

@@ -44,9 +44,11 @@ Backend service
 apps/frontend/          frontend app package
 apps/frontend/src/stores/          GameStore + SocketStore
 apps/backend/           auth, economy, and future payment backend
+apps/bot-runner/        external bot client runtime
 packages/shared/        canonical schema + generated frontend/backend types
 packages/spacetimedb/   authoritative game module
 packages/spacetimedb-bindings/ generated SpacetimeDB TypeScript client bindings
+packages/agent-sdk/     shared bot observation and action schemas
 docs/                   plans and research
 ```
 
@@ -138,6 +140,14 @@ pnpm --filter backend dev
 pnpm --filter frontend dev
 ```
 
+### 9. Start the bot runner
+
+This is optional for AI and lobby-fill testing.
+
+```bash
+pnpm --filter bot-runner start
+```
+
 ## Telegram OIDC in Local Dev
 
 Telegram OIDC does not work on plain `localhost` or `127.0.0.1`. For standalone browser sign-in, use HTTPS tunnels and register the OIDC origin + callback in the BotFather mini app.
@@ -180,6 +190,8 @@ Open the app via the frontend HTTPS tunnel, not localhost.
 | `pnpm --filter frontend type-check` | frontend type-check |
 | `pnpm --filter backend dev` | start the backend |
 | `pnpm --filter backend test` | run backend tests |
+| `pnpm --filter bot-runner start` | start the external bot runner |
+| `pnpm --filter bot-runner test` | run bot runner tests |
 | `pnpm --filter @battle-circles/shared codegen` | regenerate shared frontend/backend TS types |
 | `pnpm --filter @battle-circles/spacetimedb generate` | regenerate frontend module bindings |
 | `pnpm run spacetime:start` | start local SpacetimeDB |
@@ -216,3 +228,4 @@ Still in progress:
 - [ROADMAP.md](ROADMAP.md)
 - [ROADMAP-backend.md](ROADMAP-backend.md)
 - [AGENTS.md](AGENTS.md)
+- [docs/bot-runner.md](docs/bot-runner.md)

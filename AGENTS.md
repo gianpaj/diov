@@ -40,10 +40,12 @@ diov/
 │   │   │   └── vite-env.d.ts
 │   │   └── package.json
 │   └── backend/                ← auth, economy, and future payments backend
+│   └── bot-runner/             ← external bot and AI client runtime
 ├── packages/
 │   ├── shared/                 ← canonical schema + codegen
 │   └── spacetimedb/            ← authoritative SpacetimeDB module
 │   └── spacetimedb-bindings/   ← generated SpacetimeDB TS client bindings
+│   └── agent-sdk/              ← shared bot observation and action schemas
 ├── docs/
 ├── package.json
 └── README.md
@@ -140,6 +142,15 @@ pnpm --filter backend dev
 
 Use the backend whenever you work on auth, wallet, inventory, shop, or payment-related features.
 
+### Bot runner
+
+```bash
+cd diov
+pnpm --filter bot-runner start
+```
+
+Use the bot runner for AI clients, lobby-fill bots, benchmark bots, and trace export.
+
 ### SpacetimeDB module workflow
 
 ```bash
@@ -209,6 +220,9 @@ Frontend:
 
 Backend:
 - see `apps/backend/.env.example`
+
+Bot runner:
+- see `apps/bot-runner/.env.example`
 
 ## Editing Rules
 

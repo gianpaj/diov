@@ -9,4 +9,4 @@
  * auth tables in the same Turso database.
  */
 
-export { db } from '../db'
+export { db } from '../db.js'

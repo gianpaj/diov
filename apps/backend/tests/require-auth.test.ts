@@ -9,8 +9,8 @@ vi.mock('../src/auth.ts', () => ({
   },
 }))
 
-import { auth } from '../src/auth'
-import { requireAuth } from '../src/middleware/auth'
+import { auth } from '../src/auth.js'
+import { requireAuth } from '../src/middleware/auth.js'
 
 describe('requireAuth middleware', () => {
   it('returns 401 when there is no authenticated session', async () => {

@@ -19,7 +19,7 @@
 // `RoomStatus` is both a const object and a type alias in generated.ts.
 // A plain `export { ... }` covers both the value and type sides.
 
-export { RoomStatus } from './generated'
+export { RoomStatus } from './generated.js'
 
 // ── Type-only re-exports ──────────────────────────────────────────────────
 //
@@ -55,12 +55,12 @@ export type {
   PlayerEatenPayload,
   KnibbleSpawnedPayload,
   ErrorPayload,
-} from './generated'
+} from './generated.js'
 
 // ── Backward-compat aliases ───────────────────────────────────────────────
 //
 // The old hand-written types/index.ts exported these names.  Code that
 // imports them continues to compile without a bulk rename.
 
-export type { PlayerInput as PlayerInputPayload } from './generated'
-export type { RoomStatusValue as RoomStatusValueAlias } from './generated'
+export type { PlayerInput as PlayerInputPayload } from './generated.js'
+export type { RoomStatusValue as RoomStatusValueAlias } from './generated.js'

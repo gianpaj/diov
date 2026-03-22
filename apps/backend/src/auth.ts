@@ -1,8 +1,8 @@
 import { betterAuth } from 'better-auth'
 import { anonymous } from 'better-auth/plugins'
 import { telegram } from 'better-auth-telegram'
-import { config } from './config'
-import { db } from './db'
+import { config } from './config.js'
+import { db } from './db.js'
 
 export const auth = betterAuth({
   database: {

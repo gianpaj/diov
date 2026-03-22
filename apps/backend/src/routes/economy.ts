@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { auth } from '../auth'
-import { db } from '../db'
+import { auth } from '../auth.js'
+import { db } from '../db.js'
 import {
   claimDailyReward,
   equipSkin,
@@ -14,7 +14,7 @@ import {
   purchaseItem,
   updateLoadout,
   type PurchaseMethod,
-} from '../persistence/economy'
+} from '../persistence/economy.js'
 
 type ErrorStatus = 400 | 401 | 403 | 404 | 409
 

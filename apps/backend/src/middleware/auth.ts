@@ -1,5 +1,5 @@
 import type { Context, Next } from 'hono'
-import { auth } from '../auth'
+import { auth } from '../auth.js'
 
 /**
  * Hono middleware that requires an authenticated session.

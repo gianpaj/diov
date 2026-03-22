@@ -1,5 +1,5 @@
 import type { Client } from '@libsql/client'
-import { db } from '../db'
+import { db } from '../db.js'
 
 export type CatalogCategory = 'SKIN' | 'COLOR_PACK'
 export type WalletEntryType = 'EARN' | 'SPEND'

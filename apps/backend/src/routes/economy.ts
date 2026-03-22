@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { auth } from '../auth.ts'
-import { db } from '../db.ts'
+import { auth } from '../auth'
+import { db } from '../db'
 import {
   claimDailyReward,
   equipSkin,
@@ -14,7 +14,7 @@ import {
   purchaseItem,
   updateLoadout,
   type PurchaseMethod,
-} from '../persistence/economy.ts'
+} from '../persistence/economy'
 
 type ErrorStatus = 400 | 401 | 403 | 404 | 409
 
@@ -56,7 +56,10 @@ economyRoutes.get('/me', async c => {
 economyRoutes.get('/shop/items', async c => {
   const session = await getSession(c.req.raw.headers)
   const viewer = await getViewerSummary(session)
-  const items = await listCatalog(db, viewer.isRegistered && viewer.user ? viewer.user.id : undefined)
+  const items = await listCatalog(
+    db,
+    viewer.isRegistered && viewer.user ? viewer.user.id : undefined
+  )
 
   return c.json({
     total: items.length,
@@ -80,7 +83,12 @@ economyRoutes.post('/shop/items/:id/buy', async c => {
     return c.json({ error: 'INVALID_REQUEST', details: body.error.flatten() }, 400)
   }
 
-  const result = await purchaseItem(db, user.id, c.req.param('id'), body.data.paymentMethod as PurchaseMethod)
+  const result = await purchaseItem(
+    db,
+    user.id,
+    c.req.param('id'),
+    body.data.paymentMethod as PurchaseMethod
+  )
   if (!result.ok) {
     return respondWithStatus(c, result)
   }

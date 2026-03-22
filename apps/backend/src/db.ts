@@ -1,5 +1,5 @@
 import { createClient } from '@libsql/client'
-import { config } from './config.ts'
+import { config } from './config'
 
 export const db = createClient({
   url: config.TURSO_DATABASE_URL,

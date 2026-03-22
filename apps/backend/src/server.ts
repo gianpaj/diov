@@ -2,10 +2,10 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serve } from '@hono/node-server'
 import { fileURLToPath } from 'node:url'
-import { auth } from './auth.ts'
-import { config } from './config.ts'
-import { ensureEconomySchema } from './persistence/economy.ts'
-import { economyRoutes } from './routes/economy.ts'
+import { auth } from './auth'
+import { config } from './config'
+import { ensureEconomySchema } from './persistence/economy'
+import { economyRoutes } from './routes/economy'
 
 export const app = new Hono()
 

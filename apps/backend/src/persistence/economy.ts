@@ -1,5 +1,5 @@
 import type { Client } from '@libsql/client'
-import { db } from '../db.ts'
+import { db } from '../db'
 
 export type CatalogCategory = 'SKIN' | 'COLOR_PACK'
 export type WalletEntryType = 'EARN' | 'SPEND'
@@ -730,7 +730,9 @@ export async function getLoadout(client: Client, userId: string): Promise<Loadou
     }
   }
 
-  const equippedSkinId = loadoutRow?.skin_item_id ? String(loadoutRow.skin_item_id) : DEFAULT_SKIN_ITEM_ID
+  const equippedSkinId = loadoutRow?.skin_item_id
+    ? String(loadoutRow.skin_item_id)
+    : DEFAULT_SKIN_ITEM_ID
   const equippedColorId = loadoutRow?.color_item_id
     ? String(loadoutRow.color_item_id)
     : DEFAULT_COLOR_ITEM_ID
@@ -763,7 +765,12 @@ export async function listUserSkins(client: Client, userId: string) {
   }
 }
 
-async function assertOwnership(client: Client, userId: string, itemId: string, category?: CatalogCategory) {
+async function assertOwnership(
+  client: Client,
+  userId: string,
+  itemId: string,
+  category?: CatalogCategory
+) {
   const result = await client.execute({
     sql: `
       SELECT catalog_item.category
@@ -886,7 +893,15 @@ export async function purchaseItem(
           id, user_id, catalog_item_id, payment_method, status, external_reference, ton_amount_nano, created_at, updated_at
         ) VALUES (?, ?, ?, 'TELEGRAM_TON', 'PENDING', ?, ?, ?, ?)
       `,
-      args: [purchaseId, userId, itemId, externalReference, item.price.ton.amountNano, timestamp, timestamp],
+      args: [
+        purchaseId,
+        userId,
+        itemId,
+        externalReference,
+        item.price.ton.amountNano,
+        timestamp,
+        timestamp,
+      ],
     })
 
     return {

@@ -18,6 +18,7 @@ Use [`.env.example`](/Users/gianpaj_it/github/gianpaj/diov/apps/bot-runner/.env.
 Important variables:
 - `SPACETIMEDB_HOST`
 - `SPACETIMEDB_DB_NAME`
+- `BOT_COUNT`
 - `BOT_POLICY`
 - `BOT_POLICY_SOCKET_PATH`
 - `BOT_POLICY_OBSERVATION_FORMAT`
@@ -74,7 +75,27 @@ Example:
 BOT_TRACE_PATH=/var/log/diov/bot-traces/guest-global.jsonl
 ```
 
+If `BOT_COUNT > 1`, each bot gets its own suffixed file:
+- `/var/log/diov/bot-traces/guest-global-1.jsonl`
+- `/var/log/diov/bot-traces/guest-global-2.jsonl`
+
 The trace writer flushes on shutdown so `SIGINT` and `SIGTERM` do not drop buffered records.
+
+## Multi-bot Run
+
+Set `BOT_COUNT` above `1` to run several bot clients in one process.
+
+Names are derived from `BOT_PLAYER_NAME`:
+- `Bot Alpha 1`
+- `Bot Alpha 2`
+- `Bot Alpha 3`
+
+Example:
+
+```env
+BOT_PLAYER_NAME=Bot Alpha
+BOT_COUNT=3
+```
 
 ## Hetzner Deployment Notes
 

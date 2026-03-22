@@ -19,6 +19,7 @@ const ConfigSchema = z.object({
   BOT_POLICY_SOCKET_PATH: z.string().optional().default('/tmp/battle-circles-policy.sock'),
   BOT_POLICY_OBSERVATION_FORMAT: z.enum(['structured', 'packed']).optional().default('structured'),
   BOT_TRACE_PATH: z.string().optional(),
+  BOT_COUNT: intFromEnv(1),
   BOT_VIEWPORT_WIDTH: intFromEnv(1280),
   BOT_VIEWPORT_HEIGHT: intFromEnv(720),
   BOT_CAMERA_SMOOTHING: z
@@ -43,6 +44,7 @@ export const config = {
   BOT_POLICY_SOCKET_PATH: env.BOT_POLICY_SOCKET_PATH,
   BOT_POLICY_OBSERVATION_FORMAT: env.BOT_POLICY_OBSERVATION_FORMAT,
   BOT_TRACE_PATH: env.BOT_TRACE_PATH,
+  BOT_COUNT: env.BOT_COUNT,
   BOT_VIEWPORT_WIDTH: env.BOT_VIEWPORT_WIDTH,
   BOT_VIEWPORT_HEIGHT: env.BOT_VIEWPORT_HEIGHT,
   BOT_CAMERA_SMOOTHING: env.BOT_CAMERA_SMOOTHING,

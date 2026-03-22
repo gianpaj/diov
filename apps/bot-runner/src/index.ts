@@ -1,12 +1,11 @@
-import { createPolicyFromConfig } from './policies/index.ts'
-import { BotClient } from './runtime/BotClient.ts'
+import { BotSupervisor } from './runtime/BotSupervisor.ts'
 
-const botClient = new BotClient(createPolicyFromConfig())
+const botSupervisor = new BotSupervisor()
 
-botClient.start()
+botSupervisor.start()
 
 const stop = async () => {
-  await botClient.stop()
+  await botSupervisor.stop()
   process.exit(0)
 }
 

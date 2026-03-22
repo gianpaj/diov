@@ -25,6 +25,13 @@ export interface BotPolicy {
   decide(input: BotDecisionInput): CanonicalActionV1 | Promise<CanonicalActionV1>
 }
 
+export interface BotClientOptions {
+  policy?: BotPolicy
+  playerName?: string
+  policyName?: string
+  tracePath?: string
+}
+
 export class BotClient {
   private connection: DbConnection | null = null
   private subscription: SubscriptionHandle | null = null
@@ -33,11 +40,20 @@ export class BotClient {
   private lastDecisionAt = 0
   private joinInFlight = false
   private acting = false
-  private readonly traceWriter = config.BOT_TRACE_PATH
-    ? new DecisionTraceWriter(config.BOT_TRACE_PATH)
-    : null
+  private readonly policy: BotPolicy
+  private readonly playerName: string
+  private readonly policyName: string
+  private readonly traceWriter: DecisionTraceWriter | null
 
-  constructor(private readonly policy: BotPolicy = new LobbyFillPolicy()) {}
+  constructor(options: BotClientOptions = {}) {
+    this.policy = options.policy ?? new LobbyFillPolicy()
+    this.playerName = options.playerName ?? config.BOT_PLAYER_NAME
+    this.policyName = options.policyName ?? config.BOT_POLICY
+    this.traceWriter =
+      (options.tracePath ?? config.BOT_TRACE_PATH)
+        ? new DecisionTraceWriter(options.tracePath ?? config.BOT_TRACE_PATH!)
+        : null
+  }
 
   start() {
     const builder = DbConnection.builder()
@@ -113,7 +129,7 @@ export class BotClient {
     try {
       await this.connection.reducers.joinGame({
         roomId: config.BOT_ROOM_ID,
-        playerName: config.BOT_PLAYER_NAME,
+        playerName: this.playerName,
         skinId: undefined,
         color: undefined,
       })
@@ -170,7 +186,7 @@ export class BotClient {
       })
       await this.writeDecisionTrace({
         version: 1,
-        policyName: config.BOT_POLICY,
+        policyName: this.policyName,
         recordedAtMs: now,
         viewportBounds,
         policyObservation,

@@ -8,6 +8,7 @@ import { ensureEconomySchema } from './persistence/economy.js'
 import { economyRoutes } from './routes/economy.js'
 
 export const app = new Hono()
+export default app
 
 const corsOptions = cors({
   // When CORS_ORIGIN is '*', echo the request origin instead of using '*'

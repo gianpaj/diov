@@ -1,0 +1,96 @@
+{
+  "header": {
+    "version": 1,
+    "tickId": 42,
+    "timestampMs": 1774180000000
+  },
+  "room": {
+    "status": "playing",
+    "bounds": {
+      "x": 0,
+      "y": 0,
+      "width": 2000,
+      "height": 2000
+    },
+    "timeRemainingMs": 145000,
+    "playerCount": 6
+  },
+  "allPlayers": [
+    {
+      "id": "bot-alpha",
+      "position": {
+        "x": 512.5,
+        "y": 384.25
+      },
+      "velocity": {
+        "x": 1.5,
+        "y": -0.25
+      },
+      "radius": 24,
+      "score": 180,
+      "isAlive": true,
+      "relation": "self"
+    },
+    {
+      "id": "player-delta",
+      "position": {
+        "x": 1300,
+        "y": 1550
+      },
+      "velocity": {
+        "x": 0.2,
+        "y": 0.1
+      },
+      "radius": 41,
+      "score": 420,
+      "isAlive": true,
+      "relation": "larger"
+    }
+  ],
+  "allFood": [
+    {
+      "id": "knibble-1",
+      "position": {
+        "x": 490,
+        "y": 410
+      },
+      "size": 8
+    },
+    {
+      "id": "knibble-hidden",
+      "position": {
+        "x": 1675,
+        "y": 1720
+      },
+      "size": 11
+    }
+  ],
+  "allProjectiles": [
+    {
+      "id": "spit-1",
+      "position": {
+        "x": 560,
+        "y": 340
+      },
+      "velocity": {
+        "x": 3,
+        "y": -1
+      },
+      "size": 6,
+      "ownerId": "player-charlie"
+    }
+  ],
+  "fullLeaderboard": [
+    {
+      "id": "player-delta",
+      "score": 420,
+      "rank": 1
+    },
+    {
+      "id": "bot-alpha",
+      "score": 180,
+      "rank": 2
+    }
+  ],
+  "fullResults": []
+}

@@ -1,5 +1,6 @@
 import {
   canonicalActionV1Schema,
+  decisionTraceRecordV1Schema,
   policyBridgeRequestV1Schema,
   policyObservationV1Schema,
   packedPolicyObservationV1Schema,
@@ -37,6 +38,9 @@ export const validatePackedPolicyObservationV1 = (payload: unknown) =>
 
 export const validatePolicyBridgeRequestV1 = (payload: unknown) =>
   policyBridgeRequestV1Schema.safeParse(payload)
+
+export const validateDecisionTraceRecordV1 = (payload: unknown) =>
+  decisionTraceRecordV1Schema.safeParse(payload)
 
 export const validatePrivilegedDiagnosticsV1 = (payload: unknown) =>
   privilegedDiagnosticsV1Schema.safeParse(payload)

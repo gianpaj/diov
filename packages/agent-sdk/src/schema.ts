@@ -198,6 +198,16 @@ export const privilegedDiagnosticsV1Schema = z.object({
   fullResults: z.array(recentResultEntryV1Schema),
 })
 
+export const decisionTraceRecordV1Schema = z.object({
+  version: agentSchemaVersionSchema,
+  policyName: z.string().min(1),
+  recordedAtMs: z.number().int().nonnegative(),
+  viewportBounds: boundsSchema,
+  policyObservation: policyObservationV1Schema,
+  privilegedDiagnostics: privilegedDiagnosticsV1Schema,
+  action: canonicalActionV1Schema,
+})
+
 export type AgentSchemaVersion = z.infer<typeof agentSchemaVersionSchema>
 export type Vector2D = z.infer<typeof vector2DSchema>
 export type Bounds = z.infer<typeof boundsSchema>
@@ -222,3 +232,4 @@ export type PackedPolicyObservationV1 = z.infer<typeof packedPolicyObservationV1
 export type PolicyBridgeObservationFormat = z.infer<typeof policyBridgeObservationFormatSchema>
 export type PolicyBridgeRequestV1 = z.infer<typeof policyBridgeRequestV1Schema>
 export type PrivilegedDiagnosticsV1 = z.infer<typeof privilegedDiagnosticsV1Schema>
+export type DecisionTraceRecordV1 = z.infer<typeof decisionTraceRecordV1Schema>

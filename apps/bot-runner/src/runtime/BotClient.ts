@@ -3,6 +3,7 @@ import {
   stepCameraTowardsTarget,
   type Bounds,
   type CanonicalActionV1,
+  type DecisionTraceRecordV1,
   type PolicyObservationV1,
 } from '@battle-circles/agent-sdk'
 import {
@@ -13,6 +14,7 @@ import {
 import { config } from '../config.ts'
 import { LobbyFillPolicy } from '../policies/LobbyFillPolicy.ts'
 import { buildSnapshotFromConnection } from './buildSnapshot.ts'
+import { DecisionTraceWriter } from './DecisionTraceWriter.ts'
 
 export interface BotDecisionInput {
   policyObservation: PolicyObservationV1
@@ -31,6 +33,9 @@ export class BotClient {
   private lastDecisionAt = 0
   private joinInFlight = false
   private acting = false
+  private readonly traceWriter = config.BOT_TRACE_PATH
+    ? new DecisionTraceWriter(config.BOT_TRACE_PATH)
+    : null
 
   constructor(private readonly policy: BotPolicy = new LobbyFillPolicy()) {}
 
@@ -78,9 +83,10 @@ export class BotClient {
     this.connection = builder.build()
   }
 
-  stop() {
+  async stop() {
     this.subscription?.unsubscribe()
     this.connection?.disconnect()
+    await this.traceWriter?.close()
     this.subscription = null
     this.connection = null
     this.selfId = null
@@ -149,17 +155,27 @@ export class BotClient {
         config.BOT_CAMERA_SMOOTHING
       )
 
-      const { policyObservation, viewportBounds } = buildObservationArtifacts(snapshot, {
-        cameraPosition: this.cameraPosition,
-        dimensions: {
-          width: config.BOT_VIEWPORT_WIDTH,
-          height: config.BOT_VIEWPORT_HEIGHT,
-        },
-      })
+      const { policyObservation, privilegedDiagnostics, viewportBounds } =
+        buildObservationArtifacts(snapshot, {
+          cameraPosition: this.cameraPosition,
+          dimensions: {
+            width: config.BOT_VIEWPORT_WIDTH,
+            height: config.BOT_VIEWPORT_HEIGHT,
+          },
+        })
 
       const action = await this.policy.decide({
         policyObservation,
         viewportBounds,
+      })
+      await this.writeDecisionTrace({
+        version: 1,
+        policyName: config.BOT_POLICY,
+        recordedAtMs: now,
+        viewportBounds,
+        policyObservation,
+        privilegedDiagnostics,
+        action,
       })
       await this.executeAction(action)
       this.lastDecisionAt = now
@@ -184,6 +200,19 @@ export class BotClient {
 
     if (action.ability === 'spit') {
       await this.connection.reducers.spit({})
+    }
+  }
+
+  private async writeDecisionTrace(record: DecisionTraceRecordV1) {
+    if (!this.traceWriter) {
+      return
+    }
+
+    try {
+      await this.traceWriter.write(record)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown trace write error'
+      console.error('[bot-runner] trace write failed', message)
     }
   }
 }

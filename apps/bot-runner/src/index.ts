@@ -5,10 +5,14 @@ const botClient = new BotClient(createPolicyFromConfig())
 
 botClient.start()
 
-const stop = () => {
-  botClient.stop()
+const stop = async () => {
+  await botClient.stop()
   process.exit(0)
 }
 
-process.on('SIGINT', stop)
-process.on('SIGTERM', stop)
+process.on('SIGINT', () => {
+  void stop()
+})
+process.on('SIGTERM', () => {
+  void stop()
+})

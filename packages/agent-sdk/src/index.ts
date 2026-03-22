@@ -3,6 +3,7 @@ export type {
   Bounds,
   CanonicalAbility,
   CanonicalActionV1,
+  DecisionTraceRecordV1,
   LeaderboardEntryV1,
   ObservationHeaderV1,
   ObservationRoomV1,
@@ -30,6 +31,7 @@ export {
   boundsSchema,
   canonicalAbilitySchema,
   canonicalActionV1Schema,
+  decisionTraceRecordV1Schema,
   leaderboardEntryV1Schema,
   observationHeaderV1Schema,
   observationRoomV1Schema,
@@ -98,6 +100,7 @@ export {
 
 export {
   validateCanonicalActionV1,
+  validateDecisionTraceRecordV1,
   validatePackedPolicyObservationV1,
   validatePolicyBridgeRequestV1,
   validatePolicyObservationV1,

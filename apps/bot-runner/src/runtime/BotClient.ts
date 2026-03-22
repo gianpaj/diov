@@ -14,7 +14,7 @@ import { LobbyFillPolicy } from '../policies/LobbyFillPolicy.ts'
 import { buildSnapshotFromConnection } from './buildSnapshot.ts'
 
 export interface BotPolicy {
-  decide(observation: PolicyObservationV1): CanonicalActionV1
+  decide(observation: PolicyObservationV1): CanonicalActionV1 | Promise<CanonicalActionV1>
 }
 
 export class BotClient {
@@ -151,7 +151,7 @@ export class BotClient {
         },
       })
 
-      const action = this.policy.decide(policyObservation)
+      const action = await this.policy.decide(policyObservation)
       await this.executeAction(action)
       this.lastDecisionAt = now
     } finally {

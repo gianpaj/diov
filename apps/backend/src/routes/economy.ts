@@ -49,8 +49,33 @@ const respondWithStatus = <T extends { status: number }>(c: any, payload: T) =>
 export const economyRoutes = new Hono()
 
 economyRoutes.get('/me', async c => {
+  const startedAt = Date.now()
+  const hasCookieHeader = c.req.raw.headers.has('cookie')
+
+  console.info('[economy:/api/me] request started', {
+    host: c.req.header('host') ?? null,
+    method: c.req.method,
+    hasCookieHeader,
+  })
+
+  const sessionStartedAt = Date.now()
   const session = await getSession(c.req.raw.headers)
-  return c.json(await getViewerSummary(session))
+  console.info('[economy:/api/me] getSession completed', {
+    ms: Date.now() - sessionStartedAt,
+    hasSession: Boolean(session),
+    hasUser: Boolean(session?.user),
+  })
+
+  const viewerStartedAt = Date.now()
+  const viewer = await getViewerSummary(session)
+  console.info('[economy:/api/me] getViewerSummary completed', {
+    ms: Date.now() - viewerStartedAt,
+    totalMs: Date.now() - startedAt,
+    isAuthenticated: viewer.isAuthenticated,
+    isAnonymous: viewer.isAnonymous,
+  })
+
+  return c.json(viewer)
 })
 
 economyRoutes.get('/shop/items', async c => {

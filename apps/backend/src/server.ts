@@ -37,6 +37,17 @@ app.get('/', c =>
 
 app.get('/health', c => c.json({ status: 'ok' }))
 
+app.get('/api/health/db', async c => {
+  const startedAt = Date.now()
+  const result = await auth.options.database.db.execute('select 1 as ok')
+  return c.json({
+    status: 'ok',
+    db: 'reachable',
+    ms: Date.now() - startedAt,
+    value: result.rows[0]?.ok ?? null,
+  })
+})
+
 const isMainModule = process.argv[1] === fileURLToPath(import.meta.url)
 
 if (isMainModule) {

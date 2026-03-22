@@ -36,6 +36,12 @@ Backend service
   ├─ Telegram OIDC + Mini App auth
   ├─ wallet / ledger / catalog / inventory / loadout APIs
   └─ future TON checkout, webhooks, and entitlements
+
+External bot runner
+  ├─ connects to SpacetimeDB as a normal client
+  ├─ builds fairness-filtered observations
+  ├─ runs local policies or a Unix-socket bridge
+  └─ exports traces for replay and training
 ```
 
 ## Important Directories
@@ -148,6 +154,11 @@ This is optional for AI and lobby-fill testing.
 pnpm --filter bot-runner start
 ```
 
+Optional:
+- use `BOT_COUNT` to run several bots in one process
+- use `BOT_TRACE_PATH` to export newline-delimited decision traces
+- use `BOT_POLICY=bridge` to delegate actions to the local Python bridge
+
 ## Telegram OIDC in Local Dev
 
 Telegram OIDC does not work on plain `localhost` or `127.0.0.1`. For standalone browser sign-in, use HTTPS tunnels and register the OIDC origin + callback in the BotFather mini app.
@@ -191,6 +202,7 @@ Open the app via the frontend HTTPS tunnel, not localhost.
 | `pnpm --filter backend dev` | start the backend |
 | `pnpm --filter backend test` | run backend tests |
 | `pnpm --filter bot-runner start` | start the external bot runner |
+| `pnpm --filter bot-runner replay <trace.jsonl>` | replay a trace against the current bot policy |
 | `pnpm --filter bot-runner test` | run bot runner tests |
 | `pnpm --filter @battle-circles/shared codegen` | regenerate shared frontend/backend TS types |
 | `pnpm --filter @battle-circles/spacetimedb generate` | regenerate frontend module bindings |
@@ -205,6 +217,8 @@ Working:
 - Queue modes for guest and registered play
 - Backend wallet, ledger, catalog, inventory, and loadout APIs
 - Homepage shop/customizer flow and cosmetic-aware joins
+- External bot runner with lobby-fill, benchmark, and bridge policies
+- Packed observation transport, trace export, and replay harness
 
 Still in progress:
 - Telegram OIDC and Telegram Mini App auth support
@@ -228,4 +242,5 @@ Still in progress:
 - [ROADMAP.md](ROADMAP.md)
 - [ROADMAP-backend.md](ROADMAP-backend.md)
 - [AGENTS.md](AGENTS.md)
+- [ARCHITECTURE.md](ARCHITECTURE.md)
 - [docs/bot-runner.md](docs/bot-runner.md)

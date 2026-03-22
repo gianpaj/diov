@@ -79,6 +79,12 @@ diov/
   ├─ catalog / inventory / loadouts
   └─ future TON checkout and webhooks
 
+[Bot runner]
+  ├─ external SpacetimeDB clients
+  ├─ fairness-filtered observations from row state
+  ├─ local rule policies or Unix-socket bridge policies
+  └─ trace export and replay tooling
+
 [Frontend]
   ├─ GameStore authoritative row slices
   ├─ PIXI render from row state
@@ -150,6 +156,7 @@ pnpm --filter bot-runner start
 ```
 
 Use the bot runner for AI clients, lobby-fill bots, benchmark bots, and trace export.
+Use `pnpm --filter bot-runner replay <trace.jsonl>` to replay traces against the current policy.
 
 ### SpacetimeDB module workflow
 
@@ -223,6 +230,9 @@ Backend:
 
 Bot runner:
 - see `apps/bot-runner/.env.example`
+- `BOT_COUNT` runs several bots in one process
+- `BOT_TRACE_PATH` writes newline-delimited decision traces
+- `BOT_POLICY=bridge` and `BOT_POLICY_OBSERVATION_FORMAT=packed` enable the local Python bridge
 
 ## Editing Rules
 
@@ -243,6 +253,7 @@ Bot runner:
 - Complete TON checkout, reconciliation, and webhook handling in the backend service.
 - Add tests for SpacetimeDB reducer behavior and frontend subscription flows.
 - Add better local/dev documentation for stable SpacetimeDB identities and Telegram OIDC setup.
+- Validate the bot runner against the live Hetzner SpacetimeDB deployment.
 
 
 ## Skills

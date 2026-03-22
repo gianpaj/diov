@@ -1,6 +1,7 @@
 import {
   buildObservationArtifacts,
   stepCameraTowardsTarget,
+  type Bounds,
   type CanonicalActionV1,
   type PolicyObservationV1,
 } from '@battle-circles/agent-sdk'
@@ -13,8 +14,13 @@ import { config } from '../config.ts'
 import { LobbyFillPolicy } from '../policies/LobbyFillPolicy.ts'
 import { buildSnapshotFromConnection } from './buildSnapshot.ts'
 
+export interface BotDecisionInput {
+  policyObservation: PolicyObservationV1
+  viewportBounds: Bounds
+}
+
 export interface BotPolicy {
-  decide(observation: PolicyObservationV1): CanonicalActionV1 | Promise<CanonicalActionV1>
+  decide(input: BotDecisionInput): CanonicalActionV1 | Promise<CanonicalActionV1>
 }
 
 export class BotClient {
@@ -143,7 +149,7 @@ export class BotClient {
         config.BOT_CAMERA_SMOOTHING
       )
 
-      const { policyObservation } = buildObservationArtifacts(snapshot, {
+      const { policyObservation, viewportBounds } = buildObservationArtifacts(snapshot, {
         cameraPosition: this.cameraPosition,
         dimensions: {
           width: config.BOT_VIEWPORT_WIDTH,
@@ -151,7 +157,10 @@ export class BotClient {
         },
       })
 
-      const action = await this.policy.decide(policyObservation)
+      const action = await this.policy.decide({
+        policyObservation,
+        viewportBounds,
+      })
       await this.executeAction(action)
       this.lastDecisionAt = now
     } finally {

@@ -41,7 +41,10 @@ test('BenchmarkPolicy picks the lexicographically first visible food target', ()
     { id: 'food-a', position: { x: 400, y: 350 }, size: 8 },
   ]
 
-  const action = policy.decide(observation)
+  const action = policy.decide({
+    policyObservation: observation,
+    viewportBounds: { x: 0, y: 0, width: 800, height: 600 },
+  })
   assert.equal(action.ability, 'none')
   assert.equal(action.move.x, 0)
   assert.equal(action.move.y, 1)
@@ -51,7 +54,10 @@ test('BenchmarkPolicy falls back to a deterministic movement pattern', () => {
   const policy = new BenchmarkPolicy()
   const observation = makeObservation()
 
-  const action = policy.decide(observation)
+  const action = policy.decide({
+    policyObservation: observation,
+    viewportBounds: { x: 0, y: 0, width: 800, height: 600 },
+  })
   assert.deepEqual(action, {
     move: { x: -1, y: 0 },
     ability: 'none',

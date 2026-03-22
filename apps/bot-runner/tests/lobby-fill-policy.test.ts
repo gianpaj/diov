@@ -48,7 +48,10 @@ test('LobbyFillPolicy steers away from a larger visible threat', () => {
     },
   ]
 
-  const action = policy.decide(observation)
+  const action = policy.decide({
+    policyObservation: observation,
+    viewportBounds: { x: 0, y: 0, width: 800, height: 600 },
+  })
   assert.equal(action.ability, 'none')
   assert.ok(action.move.x < 0)
 })
@@ -64,7 +67,10 @@ test('LobbyFillPolicy steers toward food when no threat is visible', () => {
     },
   ]
 
-  const action = policy.decide(observation)
+  const action = policy.decide({
+    policyObservation: observation,
+    viewportBounds: { x: 0, y: 0, width: 800, height: 600 },
+  })
   assert.equal(action.ability, 'none')
   assert.ok(action.move.x > 0)
   assert.ok(action.move.y > 0)

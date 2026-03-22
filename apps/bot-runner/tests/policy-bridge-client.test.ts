@@ -4,7 +4,12 @@ import os from 'node:os'
 import path from 'node:path'
 import net from 'node:net'
 import test from 'node:test'
-import { encodeCanonicalActionV1, type PolicyObservationV1 } from '@battle-circles/agent-sdk'
+import {
+  decodePolicyBridgeRequestV1,
+  encodeCanonicalActionV1,
+  type PolicyBridgeRequestV1,
+  type PolicyObservationV1,
+} from '@battle-circles/agent-sdk'
 import { PolicyBridgeClient } from '../src/bridge/PolicyBridgeClient.ts'
 import { encodeLengthPrefixedFrame, tryDecodeLengthPrefixedFrame } from '../src/bridge/frame.ts'
 
@@ -37,6 +42,7 @@ const observation: PolicyObservationV1 = {
 test('PolicyBridgeClient exchanges one request/response over a unix socket', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'battle-circles-bridge-'))
   const socketPath = path.join(tempDir, 'policy.sock')
+  let capturedRequest: PolicyBridgeRequestV1 | null = null
   const server = net.createServer(socket => {
     let inbound = new Uint8Array(0)
     socket.on('data', chunk => {
@@ -50,6 +56,8 @@ test('PolicyBridgeClient exchanges one request/response over a unix socket', asy
       if (!decoded) {
         return
       }
+
+      capturedRequest = decodePolicyBridgeRequestV1(decoded.frame)
 
       socket.write(
         encodeLengthPrefixedFrame(
@@ -70,10 +78,19 @@ test('PolicyBridgeClient exchanges one request/response over a unix socket', asy
 
   try {
     const client = new PolicyBridgeClient(socketPath)
-    const action = await client.requestAction(observation)
+    const action = await client.requestAction({
+      version: 1,
+      format: 'policy_observation_v1',
+      observation,
+    })
     assert.deepEqual(action, {
       move: { x: 1, y: 0 },
       ability: 'none',
+    })
+    assert.deepEqual(capturedRequest, {
+      version: 1,
+      format: 'policy_observation_v1',
+      observation,
     })
   } finally {
     server.close()

@@ -7,6 +7,13 @@ export type {
   ObservationHeaderV1,
   ObservationRoomV1,
   ObservationSelfV1,
+  PackedFoodSlotV1,
+  PackedLeaderboardSlotV1,
+  PackedPlayerSlotV1,
+  PackedPolicyObservationV1,
+  PackedProjectileSlotV1,
+  PolicyBridgeObservationFormat,
+  PolicyBridgeRequestV1,
   PolicyObservationV1,
   PrivilegedDiagnosticsV1,
   RecentResultEntryV1,
@@ -27,6 +34,13 @@ export {
   observationHeaderV1Schema,
   observationRoomV1Schema,
   observationSelfV1Schema,
+  packedFoodSlotV1Schema,
+  packedLeaderboardSlotV1Schema,
+  packedPlayerSlotV1Schema,
+  packedPolicyObservationV1Schema,
+  packedProjectileSlotV1Schema,
+  policyBridgeObservationFormatSchema,
+  policyBridgeRequestV1Schema,
   policyObservationV1Schema,
   privilegedDiagnosticsV1Schema,
   recentResultEntryV1Schema,
@@ -66,21 +80,16 @@ export {
 
 export {
   decodeCanonicalActionV1,
+  decodePolicyBridgeRequestV1,
   decodePolicyObservationV1,
   decodePrivilegedDiagnosticsV1,
   encodeCanonicalActionV1,
+  encodePolicyBridgeRequestV1,
   encodePolicyObservationV1,
   encodePrivilegedDiagnosticsV1,
 } from './packing/message-pack.ts'
 
-export type {
-  PackedFoodSlotV1,
-  PackedFrameSlotLimits,
-  PackedLeaderboardSlotV1,
-  PackedPlayerSlotV1,
-  PackedPolicyObservationV1,
-  PackedProjectileSlotV1,
-} from './packing/packed-frame.ts'
+export type { PackedFrameSlotLimits } from './packing/packed-frame.ts'
 
 export {
   DEFAULT_PACKED_FRAME_SLOT_LIMITS,
@@ -89,6 +98,8 @@ export {
 
 export {
   validateCanonicalActionV1,
+  validatePackedPolicyObservationV1,
+  validatePolicyBridgeRequestV1,
   validatePolicyObservationV1,
   validatePrivilegedDiagnosticsV1,
 } from './validators.ts'

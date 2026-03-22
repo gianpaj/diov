@@ -1,4 +1,10 @@
-import type { CanonicalActionV1, PolicyObservationV1, VisibleFoodV1, VisiblePlayerV1 } from '@battle-circles/agent-sdk'
+import type {
+  CanonicalActionV1,
+  PolicyObservationV1,
+  VisibleFoodV1,
+  VisiblePlayerV1,
+} from '@battle-circles/agent-sdk'
+import type { BotDecisionInput } from '../runtime/BotClient.ts'
 
 const normalize = (x: number, y: number) => {
   const magnitude = Math.sqrt(x * x + y * y)
@@ -25,9 +31,12 @@ const nearestByDistance = <T extends { position: PolicyObservationV1['self']['po
     return null
   }
 
-  return [...entries].sort(
-    (left, right) => distanceSquared(selfPosition, left.position) - distanceSquared(selfPosition, right.position)
-  )[0] ?? null
+  return (
+    [...entries].sort(
+      (left, right) =>
+        distanceSquared(selfPosition, left.position) - distanceSquared(selfPosition, right.position)
+    )[0] ?? null
+  )
 }
 
 const steerTowards = (
@@ -53,9 +62,11 @@ const isTarget = (selfRadius: number, player: VisiblePlayerV1) =>
   player.relation === 'smaller' && player.radius <= selfRadius * 0.85
 
 export class LobbyFillPolicy {
-  decide(observation: PolicyObservationV1): CanonicalActionV1 {
+  decide({ policyObservation: observation }: BotDecisionInput): CanonicalActionV1 {
     const { self } = observation
-    const otherPlayers = observation.visiblePlayers.filter(player => player.id !== self.playerId && player.isAlive)
+    const otherPlayers = observation.visiblePlayers.filter(
+      player => player.id !== self.playerId && player.isAlive
+    )
     const nearbyThreat = nearestByDistance(
       self.position,
       otherPlayers.filter(player => isThreat(self.radius, player))

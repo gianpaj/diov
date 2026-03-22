@@ -1,67 +1,18 @@
-import type { Bounds, PolicyObservationV1 } from '../schema.ts'
+import type {
+  Bounds,
+  PackedFoodSlotV1,
+  PackedLeaderboardSlotV1,
+  PackedPlayerSlotV1,
+  PackedPolicyObservationV1,
+  PackedProjectileSlotV1,
+  PolicyObservationV1,
+} from '../schema.ts'
 
 export interface PackedFrameSlotLimits {
   players: number
   food: number
   projectiles: number
   leaderboard: number
-}
-
-export interface PackedPlayerSlotV1 {
-  active: 0 | 1
-  x: number
-  y: number
-  vx: number
-  vy: number
-  radius: number
-  score: number
-  isAlive: 0 | 1
-  relation: 0 | 1 | 2 | 3
-}
-
-export interface PackedFoodSlotV1 {
-  active: 0 | 1
-  x: number
-  y: number
-  size: number
-}
-
-export interface PackedProjectileSlotV1 {
-  active: 0 | 1
-  x: number
-  y: number
-  vx: number
-  vy: number
-  size: number
-}
-
-export interface PackedLeaderboardSlotV1 {
-  active: 0 | 1
-  rank: number
-  score: number
-}
-
-export interface PackedPolicyObservationV1 {
-  version: 1
-  tickId: number
-  timestampMs: number
-  roomStatus: 0 | 1 | 2 | 3
-  timeRemainingMs: number
-  self: {
-    x: number
-    y: number
-    vx: number
-    vy: number
-    radius: number
-    score: number
-    isAlive: 0 | 1
-    canSplit: 0 | 1
-    canSpit: 0 | 1
-  }
-  players: PackedPlayerSlotV1[]
-  food: PackedFoodSlotV1[]
-  projectiles: PackedProjectileSlotV1[]
-  leaderboard: PackedLeaderboardSlotV1[]
 }
 
 export const DEFAULT_PACKED_FRAME_SLOT_LIMITS: PackedFrameSlotLimits = {

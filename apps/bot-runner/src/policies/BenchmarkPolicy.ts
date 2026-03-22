@@ -1,4 +1,5 @@
-import type { CanonicalActionV1, PolicyObservationV1 } from '@battle-circles/agent-sdk'
+import type { CanonicalActionV1 } from '@battle-circles/agent-sdk'
+import type { BotDecisionInput } from '../runtime/BotClient.ts'
 
 const normalize = (x: number, y: number) => {
   const magnitude = Math.sqrt(x * x + y * y)
@@ -23,8 +24,10 @@ const fallbackPattern = (tickId: number): CanonicalActionV1['move'] => {
 }
 
 export class BenchmarkPolicy {
-  decide(observation: PolicyObservationV1): CanonicalActionV1 {
-    const target = [...observation.visibleFood].sort((left, right) => left.id.localeCompare(right.id))[0]
+  decide({ policyObservation: observation }: BotDecisionInput): CanonicalActionV1 {
+    const target = [...observation.visibleFood].sort((left, right) =>
+      left.id.localeCompare(right.id)
+    )[0]
 
     if (target) {
       return {

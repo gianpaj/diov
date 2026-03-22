@@ -3,7 +3,7 @@
 Reference Unix-socket policy bridge for Battle Circles.
 
 Protocol:
-- request body: MessagePack-encoded PolicyObservationV1
+- request body: MessagePack-encoded PolicyBridgeRequestV1
 - response body: MessagePack-encoded CanonicalActionV1
 - framing: 4-byte big-endian payload length prefix
 
@@ -47,23 +47,52 @@ def send_frame(conn: socket.socket, payload: Any) -> None:
     conn.sendall(struct.pack(">I", len(packed)) + packed)
 
 
-def choose_action(observation: dict[str, Any]) -> dict[str, Any]:
+def choose_action_from_structured(observation: dict[str, Any]) -> dict[str, Any]:
     visible_food = observation.get("visibleFood", [])
     if visible_food:
-      target = sorted(visible_food, key=lambda item: item["id"])[0]
-      self_position = observation["self"]["position"]
-      dx = target["position"]["x"] - self_position["x"]
-      dy = target["position"]["y"] - self_position["y"]
-      magnitude = (dx * dx + dy * dy) ** 0.5
-      if magnitude == 0:
-          return {"move": {"x": 0.0, "y": 0.0}, "ability": "none"}
-      return {"move": {"x": dx / magnitude, "y": dy / magnitude}, "ability": "none"}
+        target = sorted(visible_food, key=lambda item: item["id"])[0]
+        self_position = observation["self"]["position"]
+        dx = target["position"]["x"] - self_position["x"]
+        dy = target["position"]["y"] - self_position["y"]
+        magnitude = (dx * dx + dy * dy) ** 0.5
+        if magnitude == 0:
+            return {"move": {"x": 0.0, "y": 0.0}, "ability": "none"}
+        return {"move": {"x": dx / magnitude, "y": dy / magnitude}, "ability": "none"}
 
     return {"move": {"x": 0.0, "y": 0.0}, "ability": "none"}
 
 
+def choose_action_from_packed(observation: dict[str, Any]) -> dict[str, Any]:
+    active_food = [
+        slot for slot in observation.get("food", []) if slot.get("active") == 1
+    ]
+    if active_food:
+        target = active_food[0]
+        self_position = observation["self"]
+        dx = target["x"] - self_position["x"]
+        dy = target["y"] - self_position["y"]
+        magnitude = (dx * dx + dy * dy) ** 0.5
+        if magnitude == 0:
+            return {"move": {"x": 0.0, "y": 0.0}, "ability": "none"}
+        return {"move": {"x": dx / magnitude, "y": dy / magnitude}, "ability": "none"}
+
+    return {"move": {"x": 0.0, "y": 0.0}, "ability": "none"}
+
+
+def choose_action(request: dict[str, Any]) -> dict[str, Any]:
+    format_name = request.get("format")
+    observation = request.get("observation", {})
+
+    if format_name == "packed_policy_observation_v1":
+        return choose_action_from_packed(observation)
+
+    return choose_action_from_structured(observation)
+
+
 def main() -> int:
-    socket_path = sys.argv[1] if len(sys.argv) > 1 else "/tmp/battle-circles-policy.sock"
+    socket_path = (
+        sys.argv[1] if len(sys.argv) > 1 else "/tmp/battle-circles-policy.sock"
+    )
     if os.path.exists(socket_path):
         os.remove(socket_path)
 
@@ -76,8 +105,8 @@ def main() -> int:
         while True:
             conn, _ = server.accept()
             with conn:
-                observation = recv_frame(conn)
-                action = choose_action(observation)
+                request = recv_frame(conn)
+                action = choose_action(request)
                 send_frame(conn, action)
     finally:
         server.close()

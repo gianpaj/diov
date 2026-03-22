@@ -3,7 +3,7 @@ import test from 'node:test'
 import { buildObservationArtifacts } from '../src/observation.ts'
 
 test('buildObservationArtifacts filters off-screen entities from the policy observation', () => {
-  const { policyObservation, privilegedDiagnostics } = buildObservationArtifacts(
+  const { policyObservation, privilegedDiagnostics, viewportBounds } = buildObservationArtifacts(
     {
       tickId: 10,
       timestampMs: 1774180001000,
@@ -91,6 +91,12 @@ test('buildObservationArtifacts filters off-screen entities from the policy obse
     privilegedDiagnostics.allPlayers.map(player => player.id),
     ['self', 'visible-smaller', 'hidden-larger']
   )
+  assert.deepEqual(viewportBounds, {
+    x: 0,
+    y: 0,
+    width: 800,
+    height: 600,
+  })
 })
 
 test('buildObservationArtifacts produces deterministic leaderboard ranking', () => {

@@ -100,6 +100,94 @@ export const policyObservationV1Schema = z.object({
   recentResults: z.array(recentResultEntryV1Schema),
 })
 
+const binaryFlagSchema = z.union([z.literal(0), z.literal(1)])
+const packedRoomStatusSchema = z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)])
+const packedVisibilityRelationSchema = z.union([
+  z.literal(0),
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+])
+
+export const packedPlayerSlotV1Schema = z.object({
+  active: binaryFlagSchema,
+  x: z.number().finite(),
+  y: z.number().finite(),
+  vx: z.number().finite(),
+  vy: z.number().finite(),
+  radius: z.number().nonnegative(),
+  score: z.number().nonnegative(),
+  isAlive: binaryFlagSchema,
+  relation: packedVisibilityRelationSchema,
+})
+
+export const packedFoodSlotV1Schema = z.object({
+  active: binaryFlagSchema,
+  x: z.number().finite(),
+  y: z.number().finite(),
+  size: z.number().nonnegative(),
+})
+
+export const packedProjectileSlotV1Schema = z.object({
+  active: binaryFlagSchema,
+  x: z.number().finite(),
+  y: z.number().finite(),
+  vx: z.number().finite(),
+  vy: z.number().finite(),
+  size: z.number().nonnegative(),
+})
+
+export const packedLeaderboardSlotV1Schema = z.object({
+  active: binaryFlagSchema,
+  rank: z.number().int().nonnegative(),
+  score: z.number().nonnegative(),
+})
+
+export const packedPolicyObservationV1Schema = z.object({
+  version: agentSchemaVersionSchema,
+  tickId: z.number().int().nonnegative(),
+  timestampMs: z.number().int().nonnegative(),
+  roomStatus: packedRoomStatusSchema,
+  timeRemainingMs: z.number().int().nonnegative(),
+  self: z.object({
+    x: z.number().finite(),
+    y: z.number().finite(),
+    vx: z.number().finite(),
+    vy: z.number().finite(),
+    radius: z.number().nonnegative(),
+    score: z.number().nonnegative(),
+    isAlive: binaryFlagSchema,
+    canSplit: binaryFlagSchema,
+    canSpit: binaryFlagSchema,
+  }),
+  players: z.array(packedPlayerSlotV1Schema),
+  food: z.array(packedFoodSlotV1Schema),
+  projectiles: z.array(packedProjectileSlotV1Schema),
+  leaderboard: z.array(packedLeaderboardSlotV1Schema),
+})
+
+export const policyBridgeObservationFormatSchema = z.enum([
+  'policy_observation_v1',
+  'packed_policy_observation_v1',
+])
+
+const structuredPolicyBridgeRequestV1Schema = z.object({
+  version: agentSchemaVersionSchema,
+  format: z.literal('policy_observation_v1'),
+  observation: policyObservationV1Schema,
+})
+
+const packedPolicyBridgeRequestV1Schema = z.object({
+  version: agentSchemaVersionSchema,
+  format: z.literal('packed_policy_observation_v1'),
+  observation: packedPolicyObservationV1Schema,
+})
+
+export const policyBridgeRequestV1Schema = z.discriminatedUnion('format', [
+  structuredPolicyBridgeRequestV1Schema,
+  packedPolicyBridgeRequestV1Schema,
+])
+
 export const privilegedDiagnosticsV1Schema = z.object({
   header: observationHeaderV1Schema,
   room: observationRoomV1Schema,
@@ -126,4 +214,11 @@ export type VisibleProjectileV1 = z.infer<typeof visibleProjectileV1Schema>
 export type LeaderboardEntryV1 = z.infer<typeof leaderboardEntryV1Schema>
 export type RecentResultEntryV1 = z.infer<typeof recentResultEntryV1Schema>
 export type PolicyObservationV1 = z.infer<typeof policyObservationV1Schema>
+export type PackedPlayerSlotV1 = z.infer<typeof packedPlayerSlotV1Schema>
+export type PackedFoodSlotV1 = z.infer<typeof packedFoodSlotV1Schema>
+export type PackedProjectileSlotV1 = z.infer<typeof packedProjectileSlotV1Schema>
+export type PackedLeaderboardSlotV1 = z.infer<typeof packedLeaderboardSlotV1Schema>
+export type PackedPolicyObservationV1 = z.infer<typeof packedPolicyObservationV1Schema>
+export type PolicyBridgeObservationFormat = z.infer<typeof policyBridgeObservationFormatSchema>
+export type PolicyBridgeRequestV1 = z.infer<typeof policyBridgeRequestV1Schema>
 export type PrivilegedDiagnosticsV1 = z.infer<typeof privilegedDiagnosticsV1Schema>

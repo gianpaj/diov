@@ -71,6 +71,7 @@ export interface BuildObservationOptions {
 }
 
 export interface BuiltObservationArtifacts {
+  viewportBounds: PolicyObservationV1['room']['bounds']
   policyObservation: PolicyObservationV1
   privilegedDiagnostics: PrivilegedDiagnosticsV1
 }
@@ -103,7 +104,8 @@ const sortByDistanceThenId = <T extends { id: string; position: Vector2D }>(
   origin: Vector2D
 ) =>
   [...entries].sort((left, right) => {
-    const distanceDelta = distanceSquared(left.position, origin) - distanceSquared(right.position, origin)
+    const distanceDelta =
+      distanceSquared(left.position, origin) - distanceSquared(right.position, origin)
     if (distanceDelta !== 0) {
       return distanceDelta
     }
@@ -128,10 +130,7 @@ const buildLeaderboard = (
       rank: index + 1,
     }))
 
-const buildResults = (
-  results: ObservationSourceResult[],
-  limit: number
-): RecentResultEntryV1[] =>
+const buildResults = (results: ObservationSourceResult[], limit: number): RecentResultEntryV1[] =>
   [...results]
     .sort((left, right) => {
       if (left.placement !== right.placement) {
@@ -205,6 +204,7 @@ export const buildObservationArtifacts = (
   const recentResults = buildResults(snapshot.results ?? [], resultsLimit)
 
   return {
+    viewportBounds,
     policyObservation: {
       header: {
         version: 1,

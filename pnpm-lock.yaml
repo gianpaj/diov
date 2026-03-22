@@ -58,6 +58,28 @@ importers:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.35)(lightningcss@1.31.1)(terser@5.46.0)
 
+  apps/bot-runner:
+    dependencies:
+      '@battle-circles/agent-sdk':
+        specifier: workspace:*
+        version: link:../../packages/agent-sdk
+      spacetimedb:
+        specifier: ^2.0.2
+        version: 2.0.3(react@19.2.4)
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.35
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.2.2
+        version: 5.8.3
+
   apps/frontend:
     dependencies:
       '@battle-circles/agent-sdk':

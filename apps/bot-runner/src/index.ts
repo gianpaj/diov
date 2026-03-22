@@ -1,6 +1,7 @@
+import { createPolicyFromConfig } from './policies/index.ts'
 import { BotClient } from './runtime/BotClient.ts'
 
-const botClient = new BotClient()
+const botClient = new BotClient(createPolicyFromConfig())
 
 botClient.start()
 

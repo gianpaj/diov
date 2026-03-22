@@ -15,6 +15,7 @@ const ConfigSchema = z.object({
   SPACETIMEDB_DB_NAME: z.string().optional().default('battle-circles'),
   BOT_PLAYER_NAME: z.string().optional().default('Bot Alpha'),
   BOT_ROOM_ID: z.string().optional().default('guest-global'),
+  BOT_POLICY: z.enum(['lobby-fill', 'benchmark']).optional().default('lobby-fill'),
   BOT_VIEWPORT_WIDTH: intFromEnv(1280),
   BOT_VIEWPORT_HEIGHT: intFromEnv(720),
   BOT_CAMERA_SMOOTHING: z
@@ -35,6 +36,7 @@ export const config = {
   SPACETIMEDB_DB_NAME: env.SPACETIMEDB_DB_NAME,
   BOT_PLAYER_NAME: env.BOT_PLAYER_NAME,
   BOT_ROOM_ID: env.BOT_ROOM_ID,
+  BOT_POLICY: env.BOT_POLICY,
   BOT_VIEWPORT_WIDTH: env.BOT_VIEWPORT_WIDTH,
   BOT_VIEWPORT_HEIGHT: env.BOT_VIEWPORT_HEIGHT,
   BOT_CAMERA_SMOOTHING: env.BOT_CAMERA_SMOOTHING,

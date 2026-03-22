@@ -44,8 +44,25 @@ export {
   filterVisibleEntities,
   getViewportBounds,
   isCircleVisibleInBounds,
+  stepCameraTowardsTarget,
   worldToScreen,
 } from './visibility.ts'
+
+export type {
+  BuildObservationOptions,
+  BuiltObservationArtifacts,
+  ObservationSourceFood,
+  ObservationSourcePlayer,
+  ObservationSourceProjectile,
+  ObservationSourceResult,
+  ObservationSourceRoom,
+  ObservationSourceSnapshot,
+} from './observation.ts'
+
+export {
+  buildObservationArtifacts as buildObservationArtifactsFromSnapshot,
+  buildObservationArtifacts,
+} from './observation.ts'
 
 export {
   validateCanonicalActionV1,

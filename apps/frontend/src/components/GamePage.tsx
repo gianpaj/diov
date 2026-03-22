@@ -6,7 +6,11 @@ import { Container, Graphics } from 'pixi.js'
 extend({ Container, Graphics })
 
 import { Pause, Play, Home } from 'lucide-react'
-import { getViewportBounds, worldToScreen } from '@battle-circles/agent-sdk/visibility'
+import {
+  getViewportBounds,
+  stepCameraTowardsTarget,
+  worldToScreen,
+} from '@battle-circles/agent-sdk/visibility'
 import { useSocketStore } from '@/stores/SocketStore'
 import { useGameStore } from '@/stores/GameStore'
 import { useJoystick } from '@/hooks/useJoystick'
@@ -182,10 +186,9 @@ const GamePage: React.FC = () => {
     const targetX = localPlayerRow.position.x
     const targetY = localPlayerRow.position.y
 
-    const newX = cam.x + (targetX - cam.x) * GAME_CONSTANTS.CAMERA_SMOOTH_FACTOR
-    const newY = cam.y + (targetY - cam.y) * GAME_CONSTANTS.CAMERA_SMOOTH_FACTOR
-
-    setCameraPosition({ x: newX, y: newY })
+    setCameraPosition(
+      stepCameraTowardsTarget(cam, { x: targetX, y: targetY }, GAME_CONSTANTS.CAMERA_SMOOTH_FACTOR)
+    )
   }, [localPlayerRow, roomState])
 
   // Handle game end

@@ -28,6 +28,15 @@ export const worldToScreen = (
   y: worldPosition.y - cameraPosition.y + dimensions.height / 2,
 })
 
+export const stepCameraTowardsTarget = (
+  cameraPosition: Vector2D,
+  targetPosition: Vector2D,
+  smoothing: number
+): Vector2D => ({
+  x: cameraPosition.x + (targetPosition.x - cameraPosition.x) * smoothing,
+  y: cameraPosition.y + (targetPosition.y - cameraPosition.y) * smoothing,
+})
+
 export const isCircleVisibleInBounds = (
   center: Vector2D,
   radius: number,

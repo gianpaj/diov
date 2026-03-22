@@ -4,6 +4,7 @@ import {
   filterVisibleEntities,
   getViewportBounds,
   isCircleVisibleInBounds,
+  stepCameraTowardsTarget,
   worldToScreen,
 } from '../src/visibility.ts'
 
@@ -13,21 +14,23 @@ test('getViewportBounds centers the viewport on the camera position', () => {
 })
 
 test('worldToScreen maps the camera center to screen center', () => {
-  const point = worldToScreen(
-    { x: 400, y: 300 },
-    { x: 400, y: 300 },
-    { width: 800, height: 600 }
-  )
+  const point = worldToScreen({ x: 400, y: 300 }, { x: 400, y: 300 }, { width: 800, height: 600 })
 
   assert.deepEqual(point, { x: 400, y: 300 })
 })
 
+test('stepCameraTowardsTarget matches the desktop smoothing step', () => {
+  const next = stepCameraTowardsTarget({ x: 100, y: 200 }, { x: 300, y: 500 }, 0.1)
+  assert.deepEqual(next, { x: 120, y: 230 })
+})
+
 test('isCircleVisibleInBounds keeps entities touching the viewport edge visible', () => {
-  const visible = isCircleVisibleInBounds(
-    { x: 810, y: 300 },
-    10,
-    { x: 0, y: 0, width: 800, height: 600 }
-  )
+  const visible = isCircleVisibleInBounds({ x: 810, y: 300 }, 10, {
+    x: 0,
+    y: 0,
+    width: 800,
+    height: 600,
+  })
 
   assert.equal(visible, true)
 })

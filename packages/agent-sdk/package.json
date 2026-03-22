@@ -12,6 +12,10 @@
       "import": "./src/schema.ts",
       "types": "./src/schema.ts"
     },
+    "./observation": {
+      "import": "./src/observation.ts",
+      "types": "./src/observation.ts"
+    },
     "./visibility": {
       "import": "./src/visibility.ts",
       "types": "./src/visibility.ts"
